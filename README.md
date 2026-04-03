@@ -1,50 +1,48 @@
-# Welcome to your Expo app 👋
+# Front-end Movo
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
-
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+Para instalar dependencias:
+```
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Para ejecutar el proyecto:
+```
+npx expo run
+```
 
-## Learn more
+## Configuración del .env
 
-To learn more about developing your project with Expo, look at the following resources:
+Para configurar el .env tendrás que dirigirte al Clerk y pillar el public publishable key.
+Este no tiene porque ser mantenido secreto y no pasa nada si se hace un leak.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=
 
-## Join the community
+## Branches del proyecto
 
-Join our community of developers creating universal apps.
+```
+master --- production
+staging --- testing server
+dev --- development
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Para que un feature llegue a production el flujo sería el siguiente **(subject-to-change)**:
+
+1. Se cree un feature en un **branch local** por separado sin publicar en git.
+2. Se testea el feature en el branch local.
+3. Se hace un merge al dev branch.
+4. Se da el visto bueno, en caso de que no, se sugiere algun cambio y se implementa las mejoras.
+5. Se pushea en staging y se va testeando en la aplicación móvil por si se encuentra algun bug en uso real.
+6. Una vez resuelto los bugs, se hace el merge con master para implementarlo al servidor de production.
+
+**NO PUSHEAR CÓDIGO GENERADO POR IA, NO ES PLAN HACER VIBECODING**
+
+## Enlaces de interes
+
+Libreria de componentes: 
+https://ui.shadcn.com/
+
+Auth:
+https://clerk.com/
+
+Hosting provider:
+https://render.com/
