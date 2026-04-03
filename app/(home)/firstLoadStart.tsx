@@ -1,16 +1,26 @@
 import { ThemedView } from '@/components/themed-view';
+import { useInitContext } from '@/context/initContext';
 import { faArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { router } from 'expo-router';
+
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text } from 'react-native';
 
 const firstLoadStart = () => {
 
+  const context = useInitContext();
+
+  function handleContinuar(){
+    context.setFirstLoad(false);
+    router.replace('/');
+  }
+
 return (
     <ThemedView style={styles.container}>
     <Text style={styles.title}>Hola!👋</Text>
     <Text style={styles.subtitle}>¿Preparado a cambiar como sueles viajar?</Text>
-    <Pressable style={styles.buttonContinuar} onPress={()=> alert("Hola")}>
+    <Pressable style={styles.buttonContinuar} onPress={handleContinuar}>
         <Text style={styles.textButton}><FontAwesomeIcon size={25} icon={faArrowRight} /></Text>
     </Pressable>
     <Text 
