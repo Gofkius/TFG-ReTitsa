@@ -43,7 +43,13 @@ export default function Page() {
       {/* Show the sign-out button when the user is signed in */}
       <SignedIn>
         <ThemedText>Hello {user?.emailAddresses[0].emailAddress}</ThemedText>
-          <Button title="Clear first load" onPress={() => context.setFirstLoad(true)} />
+        <ThemedText>Session ID: {session?.id}</ThemedText>
+        <ThemedText>First Load: {context.firstLoad ? 'true' : 'false'}</ThemedText>
+        <ThemedText>Preferences: {context.preferences ? context.preferences : 'None'}</ThemedText>
+        <Button title="Clear first load" onPress={() => {
+          context.setFirstLoad(true) 
+          context.setPreferences("")} } 
+        />
         <SignOutButton />
       </SignedIn>
     </ThemedView>

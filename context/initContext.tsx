@@ -12,21 +12,30 @@ export interface AppContextType{
     setFirstLoadReady: Dispatch<SetStateAction<boolean>>;
 }
 
-const storeData = async (value: boolean) => {
+const storeData = async (value: any, jsonName: string) => {
     try {
         const jsonValue = JSON.stringify(value)
-        await AsyncStorage.setItem('firstLoadState', jsonValue)
+        await AsyncStorage.setItem(jsonName, jsonValue)
     } catch (e) {
        console.log('Error storing data', e);
     }
 }
 
-const getData = async () => {
+const getState = async () => {
     try {
         const jsonValue = await AsyncStorage.getItem('firstLoadState')
         return jsonValue != null ? JSON.parse(jsonValue) : null;
     } catch(e) {
-        console.log('Error getting data', e);
+        console.log('Error getting first load state', e);
+    }
+}
+
+const getPreferences = async () => {
+    try {
+        const jsonValue = await AsyncStorage.getItem('preferences')
+        return jsonValue != null ? JSON.parse(jsonValue) : null;
+    } catch(e) {
+        console.log('Error getting preferences', e);
     }
 }
 
@@ -49,7 +58,14 @@ const InitContextProvider = (props: any) => {
     
     useEffect(() => {
         async function rehydrate() {
-            const storedState = await getData()
+            const storedState = await getState()
+            const storedPreferences = await getPreferences()
+
+            if (storedPreferences != null && storedPreferences !== "") {
+                setPreferences(storedPreferences);
+            } else {
+                setPreferences("PREFERENCE_NOT_SET");
+            }
 
             if (storedState !== null) {
                 setFirstLoad(storedState);
@@ -63,10 +79,16 @@ const InitContextProvider = (props: any) => {
 
     useEffect(() => {
         if(firstLoadReady){
-            storeData(firstLoad);
+            storeData(firstLoad, 'firstLoadState');
         }
     }, [firstLoad]);
-    
+
+    useEffect(() => {
+        if(firstLoadReady){
+            storeData(preferences, 'preferences');
+        }
+    }, [preferences]);
+
   return (
     <AppContext.Provider value={contextValues}>
         {props.children}

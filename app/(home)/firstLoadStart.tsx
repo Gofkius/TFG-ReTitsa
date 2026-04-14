@@ -1,5 +1,4 @@
 import { ThemedView } from '@/components/themed-view';
-import { useInitContext } from '@/context/initContext';
 import { faArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { router } from 'expo-router';
@@ -9,11 +8,8 @@ import { Image, Pressable, StyleSheet, Text } from 'react-native';
 
 const firstLoadStart = () => {
 
-  const context = useInitContext();
-
   function handleContinuar(){
-    context.setFirstLoad(false);
-    router.replace('/');
+    router.replace('/firstLoadPreferences');
   }
 
 return (
