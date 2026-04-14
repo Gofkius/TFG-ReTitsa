@@ -61,7 +61,7 @@ const InitContextProvider = (props: any) => {
             const storedState = await getState()
             const storedPreferences = await getPreferences()
 
-            if (storedPreferences != null && storedPreferences !== "") {
+            if (storedPreferences !== null && storedPreferences !== "") {
                 setPreferences(storedPreferences);
             } else {
                 setPreferences("PREFERENCE_NOT_SET");
