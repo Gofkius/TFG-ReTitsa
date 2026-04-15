@@ -1,6 +1,7 @@
 import { ThemedText } from '@/components/themed-text'
 import { ThemedView } from '@/components/themed-view'
 import { useInitContext } from '@/context/initContext'
+import { BusStop } from '@/types/busStop'
 import { SignedIn, SignedOut, useSession, useUser } from '@clerk/clerk-expo'
 import { Image } from 'expo-image'
 import { Link, Redirect } from 'expo-router'
@@ -10,6 +11,7 @@ import { AppleMaps, GoogleMaps, useLocationPermissions } from 'expo-maps'
 import { useEffect, useState } from 'react'
 import { FlatList, Platform, Text } from 'react-native'
 
+import BusStopComponent from '@/components/bus-stop'
 import * as Location from 'expo-location'
 
 export function Map() {
@@ -62,7 +64,26 @@ export default function Page() {
   // Learn more: https://clerk.com/docs/guides/configure/session-tasks
   const { session } = useSession()
 
-  const [nearbyBuses, setNearbyBuses] = useState([])
+  const hardcodedBuses: BusStop[] = [
+    {
+      id: '1',
+      routes: ['014', '914', '34', '21'],
+      direction: 'Intercambiador de L.L',
+      latitude: 28.4636,
+      longitude: -16.2636,
+      name: 'La Higuerita',
+    },
+    {
+      id: '2',
+      routes: ['014'],
+      direction: 'Intercambiador de S.C',
+      latitude: 28.4636,
+      longitude: -16.2636,
+      name: 'La Higuerita (T)',
+    },
+  ]
+
+  const [nearbyBuses, setNearbyBuses] = useState<BusStop[]>(hardcodedBuses)
 
   const context = useInitContext();
 
@@ -126,6 +147,7 @@ export default function Page() {
                 </Pressable>
               </View>
             </View>
+
             <View style={{justifyContent: 'center', alignItems: 'center', flex: 1}}>
               {nearbyBuses.length === 0 ? (
                 <View style={{justifyContent: 'center', alignItems: 'center', width: 250, marginBottom: 50}}>
@@ -134,11 +156,10 @@ export default function Page() {
                 </View>
               ) : (
               <FlatList
+                style={{width: '100%', padding: 20, marginBottom: 0}}
                 data={nearbyBuses}
                 renderItem={({ item }) => (
-                  <View>
-                    <Text>Placeholder</Text>
-                  </View>
+                  <BusStopComponent key={item.id} item={item} />
                 )}
               />)}
 
