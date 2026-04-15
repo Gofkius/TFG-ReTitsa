@@ -2,21 +2,42 @@ import { ThemedText } from '@/components/themed-text'
 import { ThemedView } from '@/components/themed-view'
 import { useInitContext } from '@/context/initContext'
 import { SignedIn, SignedOut, useSession, useUser } from '@clerk/clerk-expo'
+import { Image } from 'expo-image'
 import { Link, Redirect } from 'expo-router'
-import { StyleSheet } from 'react-native'
+import { Pressable, StyleSheet, View } from 'react-native'
 
 import { AppleMaps, GoogleMaps, useLocationPermissions } from 'expo-maps'
-import { useEffect } from 'react'
-import { Platform, Text } from 'react-native'
+import { useEffect, useState } from 'react'
+import { FlatList, Platform, Text } from 'react-native'
+
+import * as Location from 'expo-location'
 
 export function Map() {
+
+  const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null)
+
+  useEffect(() => {
+    const getInitialLocation = async () => {
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      })
+      setLocation(location.coords)
+    }
+    getInitialLocation()
+  }, [])
+
+  if (!location) {
+    return <Text>Loading map...</Text>
+  }
+
   if (Platform.OS === 'ios') {
     return <AppleMaps.View
             style={{ flex: 1 }}
             properties={{ isMyLocationEnabled: true, 
-                          pointsOfInterest: { including: [] }
+                          pointsOfInterest: { including: [] },
                         }}
             uiSettings={{ myLocationButtonEnabled: true }}
+            cameraPosition={{ zoom: 17, coordinates: { latitude: location.latitude - 0.0005, longitude: location.longitude } }}
             />
   } else if (Platform.OS === 'android') {
     return <GoogleMaps.View
@@ -40,6 +61,8 @@ export default function Page() {
   // it's possible they have session tasks to complete.
   // Learn more: https://clerk.com/docs/guides/configure/session-tasks
   const { session } = useSession()
+
+  const [nearbyBuses, setNearbyBuses] = useState([])
 
   const context = useInitContext();
 
@@ -86,6 +109,41 @@ export default function Page() {
         />
         <SignOutButton />
         */}
+        <View style={
+          {position: 'absolute', zIndex: 1, backgroundColor: '#EAEFEF',
+          borderRadius: 20, borderColor: '#BFC9D1', borderWidth: 1, width: '100%', height: 350, bottom: 0}
+          }>
+            <View style={{flexDirection: 'row', alignItems: 'center', borderColor: '#BFC9D1', borderBottomWidth: 1,
+              height: 50, width: '100%'}}>
+              <View style={{flexDirection: 'row', alignItems: 'center', marginLeft: 20}}>
+                <Image source={require('@/assets/images/bus.svg')} style={{width: 24, height: 24}} />
+                <Text style={{fontSize: 16, marginLeft: 10, color: '#25343F'}}>Guagua</Text>
+              </View>
+              <View style={{flexDirection: 'row', alignItems: 'center', marginLeft: 'auto', marginRight: 20}}>
+                <Text style={{fontSize: 16, color: '#25343F'}}>Rango</Text>
+                <Pressable style={{backgroundColor: '#BFC9D1', borderRadius: 20, height: 25, width: 65, marginLeft: 10, justifyContent: 'center', alignItems: 'center'}}>
+                  <Text style={{fontSize: 16, color: '#25343F'}}>50m</Text>
+                </Pressable>
+              </View>
+            </View>
+            <View style={{justifyContent: 'center', alignItems: 'center', flex: 1}}>
+              {nearbyBuses.length === 0 ? (
+                <View style={{justifyContent: 'center', alignItems: 'center', width: 250, marginBottom: 50}}>
+                  <Image source={require('@/assets/images/sad.svg')} style={{width: 42, height: 42}} />
+                  <Text style={{fontSize: 16, color: '#25343F', textAlign: 'center'}}>¡Uh oh! No encontramos paradas cerca de ti</Text>
+                </View>
+              ) : (
+              <FlatList
+                data={nearbyBuses}
+                renderItem={({ item }) => (
+                  <View>
+                    <Text>Placeholder</Text>
+                  </View>
+                )}
+              />)}
+
+            </View>
+        </View>
         <Map />
       </SignedIn>
     </ThemedView>
