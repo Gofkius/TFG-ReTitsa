@@ -1,10 +1,37 @@
-import { SignOutButton } from '@/components/sign-out-button'
 import { ThemedText } from '@/components/themed-text'
 import { ThemedView } from '@/components/themed-view'
 import { useInitContext } from '@/context/initContext'
 import { SignedIn, SignedOut, useSession, useUser } from '@clerk/clerk-expo'
 import { Link, Redirect } from 'expo-router'
-import { Button, StyleSheet } from 'react-native'
+import { StyleSheet } from 'react-native'
+
+import { AppleMaps, GoogleMaps, useLocationPermissions } from 'expo-maps'
+import { useEffect } from 'react'
+import { Platform, Text } from 'react-native'
+
+export function Map() {
+  if (Platform.OS === 'ios') {
+    return <AppleMaps.View
+            style={{ flex: 1 }}
+            properties={{ isMyLocationEnabled: true, 
+                          pointsOfInterest: { including: [] }
+                        }}
+            uiSettings={{ myLocationButtonEnabled: true }}
+            />
+  } else if (Platform.OS === 'android') {
+    return <GoogleMaps.View
+            style={{ flex: 1 }}
+            properties={{ isMyLocationEnabled: true,
+                          mapStyleOptions: {
+                          json: '[{"featureType":"poi","stylers":[{"visibility":"off"}]}]',
+                        },
+                        }}
+            uiSettings={{ myLocationButtonEnabled: true }}
+            />
+  } else {
+    return <Text>Maps are only available on Android and iOS</Text>
+  }
+}
 
 export default function Page() {
   const { user } = useUser()
@@ -15,6 +42,14 @@ export default function Page() {
   const { session } = useSession()
 
   const context = useInitContext();
+
+  const [status, requestPermission] = useLocationPermissions();
+
+  useEffect(() => {
+    if (!status?.granted) {
+      requestPermission();
+    }
+  }, [status, requestPermission]);
 
   if(!context.firstLoadReady){
     return (
@@ -30,8 +65,6 @@ export default function Page() {
 
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="title">Welcome!</ThemedText>
-      {/* Show the sign-in and sign-up buttons when the user is signed out */}
       <SignedOut>
         <Link href="/(auth)/sign-in">
           <ThemedText>Sign in</ThemedText>
@@ -42,6 +75,7 @@ export default function Page() {
       </SignedOut>
       {/* Show the sign-out button when the user is signed in */}
       <SignedIn>
+        {/*
         <ThemedText>Hello {user?.emailAddresses[0].emailAddress}</ThemedText>
         <ThemedText>Session ID: {session?.id}</ThemedText>
         <ThemedText>First Load: {context.firstLoad ? 'true' : 'false'}</ThemedText>
@@ -51,6 +85,8 @@ export default function Page() {
           context.setPreferences("")} } 
         />
         <SignOutButton />
+        */}
+        <Map />
       </SignedIn>
     </ThemedView>
   )
@@ -59,7 +95,6 @@ export default function Page() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 60,
     gap: 16,
     justifyContent: 'center',
   },
