@@ -113,6 +113,7 @@ export default function RootLayout() {
               name="(auth)" 
               options={{ 
                 headerShown: false,
+                tabBarStyle: { display: 'none' }, // Hide navbar on this screen
                 href: null  // Hide from navbar
               }} 
             />
@@ -120,6 +121,7 @@ export default function RootLayout() {
               name="(firstload)" 
               options={{ 
                 headerShown: false,
+                tabBarStyle: { display: 'none' }, // Hide navbar on this screen
                 href: null  // Hide from navbar
               }} 
             />
