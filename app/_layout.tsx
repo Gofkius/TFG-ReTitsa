@@ -68,6 +68,27 @@ export default function RootLayout() {
               }} 
             />
             <Tabs.Screen 
+              name="(bus-lines)" 
+              options={{ 
+                headerShown: false,
+                title: "Bus Lines",
+                tabBarLabel: 'Bus Lines',
+                tabBarIcon: ({ focused, size }) => (
+                  <View style={{
+                    backgroundColor: focused ? '#EBEFF3' : 'transparent', 
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    paddingVertical: 10,
+                    paddingHorizontal: 25, 
+                    borderRadius: 30,
+                    marginTop: 20
+                    }}>
+                    <Image source={require('@/assets/images/star-navbar.svg')} style={{ width: size, height: size }} />
+                  </View>
+                ),
+              }} 
+            />
+            <Tabs.Screen 
               name="(alerts)" 
               options={{ 
                 headerShown: false,
@@ -109,6 +130,7 @@ export default function RootLayout() {
                 ),
               }} 
             />
+            
             <Tabs.Screen 
               name="(auth)" 
               options={{ 
