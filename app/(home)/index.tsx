@@ -14,6 +14,10 @@ import { FlatList, Platform, Text } from 'react-native'
 import BusStopComponent from '@/components/bus-stop'
 import * as Location from 'expo-location'
 
+  //------------------------------------------------//
+  //            INTEGRATED MAP COMPONENT            //
+  //------------------------------------------------//
+
 export function Map() {
 
   const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null)
@@ -57,43 +61,113 @@ export function Map() {
 }
 
 export default function Page() {
-  const { user } = useUser()
-
   // If your user isn't appearing as signed in,
   // it's possible they have session tasks to complete.
   // Learn more: https://clerk.com/docs/guides/configure/session-tasks
+
+  //------------------------------------------------//
+  //               BUS AND USER STATES              //
+  //------------------------------------------------//
+
+  const { user } = useUser()
   const { session } = useSession()
 
-  const hardcodedBuses: BusStop[] = [
-    {
-      id: '1',
-      routes: ['014', '914', '34', '21'],
-      direction: 'Intercambiador de L.L',
-      latitude: 28.4636,
-      longitude: -16.2636,
-      name: 'La Higuerita',
-    },
-    {
-      id: '2',
-      routes: ['014'],
-      direction: 'Intercambiador de S.C',
-      latitude: 28.4636,
-      longitude: -16.2636,
-      name: 'La Higuerita (T)',
-    },
-  ]
+  // State for nearby bus stops and user location
+  const [nearbyBuses, setNearbyBuses] = useState<BusStop[]>()
+  const [location, setLocation] = useState<Location.LocationObjectCoords | undefined>(undefined)
 
-  const [nearbyBuses, setNearbyBuses] = useState<BusStop[]>(hardcodedBuses)
-
+  // Context for first load and preferences
   const context = useInitContext();
 
+  // Request location permissions on mount
   const [status, requestPermission] = useLocationPermissions();
+
+
+
+  //------------------------------------------------//
+  //      LOCATION AND BUS STOP FETCHING LOGIC.     //
+  //------------------------------------------------//
+
+  useEffect(() => {
+    const getInitialLocation = async () => {
+      const currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      })
+      setLocation(currentLocation.coords)
+    }
+
+    getInitialLocation()
+  }, [])
+
+
+  // Re-request permissions if status changes to not granted
 
   useEffect(() => {
     if (!status?.granted) {
       requestPermission();
     }
   }, [status, requestPermission]);
+
+
+  // Fetch nearby bus stops whenever location changes
+
+  useEffect(() => {
+    const fetchNearbyBuses = async () => {
+
+      const url = 'http://localhost:8080/titsa/cercanas' + `?lat=${location?.latitude}&lng=${location?.longitude}&radio=50`
+
+      try {
+        const response = await fetch(
+          url,
+          {
+            method: 'GET',
+            headers: {'Content-Type': 'application/json'},
+          }
+        )
+        
+        if (!response.ok) {
+          console.error('Fetch error:', response.status, response.statusText)
+          return
+        }
+        
+        const data = await response.json()
+
+        const transformedData = data.map((item: any) => {
+          // Support responses where stop is nested under `parada`, and arrivals are in `llegadas`
+          const parada = item.parada ?? item
+          const llegadas = item.llegadas ?? parada.llegadas ?? []
+
+          const routesFromArrivals = Array.isArray(llegadas) ? llegadas.map((a: any) => String(a.linea)) : []
+
+          // Try to extract route from descripcion_larga if arrivals are missing
+          const descripcionLarga = parada.descripcion_larga || parada.direction || ''
+          const routeMatch = (!routesFromArrivals.length && descripcionLarga) ? descripcionLarga.match(/Línea (\d+)/) : null
+          const routes = routesFromArrivals.length ? routesFromArrivals : (routeMatch ? [routeMatch[1]] : [])
+
+          return {
+            id: String(parada.id ?? item.id),
+            name: parada.descripcion ?? parada.name ?? item.descripcion ?? item.name ?? '',
+            latitude: parada.lat ?? parada.latitude ?? item.lat ?? item.latitude,
+            longitude: parada.lng ?? parada.longitude ?? item.lng ?? item.longitude,
+            direction: descripcionLarga,
+            routes: routes,
+            arrivals: Array.isArray(llegadas) ? llegadas.map((a: any) => ({ linea: String(a.linea), destino: a.destino, minutos: Number(a.minutos) })) : [],
+          }
+        })
+
+        console.log('Transformed buses:', transformedData)
+        setNearbyBuses(transformedData)
+      } catch (error) {
+        console.error('Error fetching nearby buses:', error)
+      }
+    }
+    
+    if(location) {
+      fetchNearbyBuses()
+    }
+  }, [location])
+  
+  // Load and first load logic
 
   if(!context.firstLoadReady){
     return (
@@ -106,6 +180,10 @@ export default function Page() {
   if(context.firstLoad === true){
     return <Redirect href={'/firstLoadStart'} />
   }
+
+  //------------------------------------------------//
+  //                  UI COMPONENTS                 //
+  //------------------------------------------------//
 
   return (
     <ThemedView style={styles.container}>
@@ -149,7 +227,9 @@ export default function Page() {
             </View>
 
             <View style={{justifyContent: 'center', alignItems: 'center', flex: 1}}>
-              {nearbyBuses.length === 0 ? (
+              {!nearbyBuses ? (
+                <Text style={{fontSize: 16, color: '#25343F'}}>Loading...</Text>
+              ) : nearbyBuses.length === 0 ? (
                 <View style={{justifyContent: 'center', alignItems: 'center', width: 250, marginBottom: 50}}>
                   <Image source={require('@/assets/images/sad.svg')} style={{width: 42, height: 42}} />
                   <Text style={{fontSize: 16, color: '#25343F', textAlign: 'center'}}>¡Uh oh! No encontramos paradas cerca de ti</Text>
@@ -157,10 +237,13 @@ export default function Page() {
               ) : (
               <FlatList
                 style={{width: '100%', padding: 20, marginBottom: 0}}
+                contentContainerStyle={{paddingBottom: 80}}
                 data={nearbyBuses}
-                renderItem={({ item }) => (
-                  <BusStopComponent key={item.id} item={item} />
-                )}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => {
+                  console.log('Rendering BusStop - location:', location)
+                  return <BusStopComponent item={item} userLocation={location} />
+                }}
               />)}
 
             </View>
