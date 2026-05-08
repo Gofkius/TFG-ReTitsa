@@ -58,7 +58,7 @@ export default function RootLayout() {
                     justifyContent: 'center',
                     alignItems: 'center',
                     paddingVertical: 10,
-                    paddingHorizontal: 25, 
+                    paddingHorizontal: 20, 
                     borderRadius: 30,
                     marginTop: 20
                     }}>
@@ -79,7 +79,7 @@ export default function RootLayout() {
                     justifyContent: 'center',
                     alignItems: 'center',
                     paddingVertical: 10,
-                    paddingHorizontal: 25, 
+                    paddingHorizontal: 20, 
                     borderRadius: 30,
                     marginTop: 20
                     }}>
@@ -100,7 +100,7 @@ export default function RootLayout() {
                     justifyContent: 'center',
                     alignItems: 'center',
                     paddingVertical: 10,
-                    paddingHorizontal: 25, 
+                    paddingHorizontal: 20, 
                     borderRadius: 30,
                     marginTop: 20
                     }}>
@@ -121,7 +121,7 @@ export default function RootLayout() {
                     justifyContent: 'center',
                     alignItems: 'center',
                     paddingVertical: 10,
-                    paddingHorizontal: 25, 
+                    paddingHorizontal: 20, 
                     borderRadius: 30,
                     marginTop: 20
                     }}>

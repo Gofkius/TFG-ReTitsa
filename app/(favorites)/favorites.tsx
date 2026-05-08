@@ -1,12 +1,11 @@
 import React from 'react'
-import { StyleSheet, Text } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { StyleSheet, Text, View } from 'react-native'
 
 const Favorites = () => {
   return (
-    <SafeAreaView>
+    <View>
       <Text>favorites</Text>
-    </SafeAreaView>
+    </View>
   )
 }
 
