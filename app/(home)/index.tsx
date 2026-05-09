@@ -7,57 +7,76 @@ import { Image } from 'expo-image'
 import { Link, Redirect } from 'expo-router'
 import { Pressable, StyleSheet, View } from 'react-native'
 
-import { AppleMaps, GoogleMaps, useLocationPermissions } from 'expo-maps'
 import { useEffect, useState } from 'react'
 import { FlatList, Platform, Text } from 'react-native'
+import MapView, { Circle, Marker, PROVIDER_GOOGLE } from 'react-native-maps'
 
 import BusStopComponent from '@/components/bus-stop'
+import BusStopPoi from '@/components/bus-stop-poi'
 import * as Location from 'expo-location'
 
   //------------------------------------------------//
   //            INTEGRATED MAP COMPONENT            //
   //------------------------------------------------//
 
-export function Map() {
+export function Map({ userLocation, radius, busStops }: { userLocation?: Location.LocationObjectCoords | null, radius: number, busStops: BusStop[] }) {
 
-  const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null)
-
-  useEffect(() => {
-    const getInitialLocation = async () => {
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      })
-      setLocation(location.coords)
-    }
-    getInitialLocation()
-  }, [])
-
-  if (!location) {
+  if (!userLocation) {
     return <Text>Loading map...</Text>
   }
 
-  if (Platform.OS === 'ios') {
-    return <AppleMaps.View
-            style={{ flex: 1 }}
-            properties={{ isMyLocationEnabled: true, 
-                          pointsOfInterest: { including: [] },
-                        }}
-            uiSettings={{ myLocationButtonEnabled: true }}
-            cameraPosition={{ zoom: 17, coordinates: { latitude: location.latitude - 0.0005, longitude: location.longitude } }}
-            />
-  } else if (Platform.OS === 'android') {
-    return <GoogleMaps.View
-            style={{ flex: 1 }}
-            properties={{ isMyLocationEnabled: true,
-                          mapStyleOptions: {
-                          json: '[{"featureType":"poi","stylers":[{"visibility":"off"}]}]',
-                        },
-                        }}
-            uiSettings={{ myLocationButtonEnabled: true }}
-            />
-  } else {
+  if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
     return <Text>Maps are only available on Android and iOS</Text>
   }
+
+  const latitudeDelta = Math.max(0.002, (radius * 4) / 111320)
+  const longitudeDelta = latitudeDelta / Math.max(Math.cos((userLocation.latitude * Math.PI) / 180), 0.2)
+  const hidePoiMapStyle = [
+    { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+    { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
+    { featureType: 'poi.attraction', stylers: [{ visibility: 'off' }] },
+    { featureType: 'poi.government', stylers: [{ visibility: 'off' }] },
+    { featureType: 'poi.medical', stylers: [{ visibility: 'off' }] },
+    { featureType: 'poi.park', stylers: [{ visibility: 'off' }] },
+    { featureType: 'poi.place_of_worship', stylers: [{ visibility: 'off' }] },
+    { featureType: 'poi.school', stylers: [{ visibility: 'off' }] },
+    { featureType: 'poi.sports_complex', stylers: [{ visibility: 'off' }] },
+    { featureType: 'transit.station', stylers: [{ visibility: 'off' }] },
+  ]
+
+  return (
+    <MapView
+      style={{ flex: 1 }}
+      provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+      showsUserLocation
+      showsMyLocationButton
+      showsPointsOfInterest={false}
+      customMapStyle={hidePoiMapStyle}
+      region={{
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta,
+        longitudeDelta,
+      }}
+    >
+      {busStops.map((stop) => (
+        <Marker
+          key={stop.id}
+          coordinate={{ latitude: stop.latitude, longitude: stop.longitude }}
+          anchor={{ x: 0.5, y: 0.5 }}
+          tracksViewChanges={false}
+        >
+          <BusStopPoi size={30} />
+        </Marker>
+      ))}
+      <Circle
+        center={{ latitude: userLocation.latitude, longitude: userLocation.longitude }}
+        radius={radius}
+        strokeColor="#53B2FF"
+        fillColor="rgba(83, 178, 255, 0.20)"
+      />
+    </MapView>
+  )
 }
 
 export default function Page() {
@@ -75,27 +94,100 @@ export default function Page() {
   // State for nearby bus stops and user location
   const [nearbyBuses, setNearbyBuses] = useState<BusStop[]>()
   const [location, setLocation] = useState<Location.LocationObjectCoords | undefined>(undefined)
+  const [radius, setRadius] = useState(50) // Default radius in meters
 
   // Context for first load and preferences
   const context = useInitContext();
 
+  // State for pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false);
+
   // Request location permissions on mount
-  const [status, requestPermission] = useLocationPermissions();
+  const [status, requestPermission] = Location.useForegroundPermissions();
+
+  // State for network error
+  const [networkError, setNetworkError] = useState(false)
 
 
+
+  function handleRefresh() {
+    try {
+      setRefreshing(true)
+      setNetworkError(false)
+      // Re-fetch location and nearby buses
+      if (location) {
+        fetchNearbyBuses()
+      }
+    } catch (error) {
+      console.error('Error refreshing data:', error)
+      setNetworkError(true)
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   //------------------------------------------------//
   //      LOCATION AND BUS STOP FETCHING LOGIC.     //
   //------------------------------------------------//
 
-  useEffect(() => {
-    const getInitialLocation = async () => {
-      const currentLocation = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      })
-      setLocation(currentLocation.coords)
-    }
+  const getInitialLocation = async () => {
+    const currentLocation = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.High,
+    })
+    setLocation(currentLocation.coords)
+  }
 
+  const fetchNearbyBuses = async () => {
+    const url = 'http://localhost:8080/titsa/cercanas' + `?lat=${location?.latitude}&lng=${location?.longitude}&radio=${radius}`
+
+    try {
+      const response = await fetch(
+        url,
+        {
+          method: 'GET',
+          headers: {'Content-Type': 'application/json'},
+        }
+      )
+      
+      if (!response.ok) {
+        console.error('Fetch error:', response.status, response.statusText)
+        return
+      }
+      
+      const data = await response.json()
+
+      const transformedData = data.map((item: any) => {
+        // New API response ---  stop is nested under `parada`, and arrivals are in `llegadas`
+        const parada = item.parada
+        const llegadas = item.llegadas
+
+        const routesFromArrivals = Array.isArray(llegadas) ? llegadas.map((a: any) => String(a.linea)) : []
+
+        // Direction from descripcion_larga; routes come from arrivals only
+        const direction = llegadas.destino
+        const routes = routesFromArrivals
+
+        return {
+          id: String(parada.id),
+          name: parada.descripcion,
+          latitude: parada.lat,
+          longitude: parada.lng,
+          direction: direction,
+          routes: routes,
+          arrivals: Array.isArray(llegadas) ? llegadas.map((a: any) => ({ linea: String(a.linea), destino: a.destino, minutos: Number(a.minutos) })) : [],
+        }
+      })
+
+      console.log('Transformed buses:', transformedData)
+      setNearbyBuses(transformedData)
+    } catch (error) {
+
+      console.error('Error fetching nearby buses:', error)
+      setNetworkError(true)
+    }
+  }
+
+  useEffect(() => {
     getInitialLocation()
   }, [])
 
@@ -112,60 +204,10 @@ export default function Page() {
   // Fetch nearby bus stops whenever location changes
 
   useEffect(() => {
-    const fetchNearbyBuses = async () => {
-
-      const url = 'http://localhost:8080/titsa/cercanas' + `?lat=${location?.latitude}&lng=${location?.longitude}&radio=50`
-
-      try {
-        const response = await fetch(
-          url,
-          {
-            method: 'GET',
-            headers: {'Content-Type': 'application/json'},
-          }
-        )
-        
-        if (!response.ok) {
-          console.error('Fetch error:', response.status, response.statusText)
-          return
-        }
-        
-        const data = await response.json()
-
-        const transformedData = data.map((item: any) => {
-          // Support responses where stop is nested under `parada`, and arrivals are in `llegadas`
-          const parada = item.parada ?? item
-          const llegadas = item.llegadas ?? parada.llegadas ?? []
-
-          const routesFromArrivals = Array.isArray(llegadas) ? llegadas.map((a: any) => String(a.linea)) : []
-
-          // Try to extract route from descripcion_larga if arrivals are missing
-          const descripcionLarga = parada.descripcion_larga || parada.direction || ''
-          const routeMatch = (!routesFromArrivals.length && descripcionLarga) ? descripcionLarga.match(/Línea (\d+)/) : null
-          const routes = routesFromArrivals.length ? routesFromArrivals : (routeMatch ? [routeMatch[1]] : [])
-
-          return {
-            id: String(parada.id ?? item.id),
-            name: parada.descripcion ?? parada.name ?? item.descripcion ?? item.name ?? '',
-            latitude: parada.lat ?? parada.latitude ?? item.lat ?? item.latitude,
-            longitude: parada.lng ?? parada.longitude ?? item.lng ?? item.longitude,
-            direction: descripcionLarga,
-            routes: routes,
-            arrivals: Array.isArray(llegadas) ? llegadas.map((a: any) => ({ linea: String(a.linea), destino: a.destino, minutos: Number(a.minutos) })) : [],
-          }
-        })
-
-        console.log('Transformed buses:', transformedData)
-        setNearbyBuses(transformedData)
-      } catch (error) {
-        console.error('Error fetching nearby buses:', error)
-      }
-    }
-    
     if(location) {
       fetchNearbyBuses()
     }
-  }, [location])
+  }, [location, radius])
   
   // Load and first load logic
 
@@ -181,6 +223,15 @@ export default function Page() {
     return <Redirect href={'/firstLoadStart'} />
   }
 
+
+  function handleRadiusChange() {
+    // Cycle through predefined radius values: 50m, 100m, 200m, 500m
+    const radiusOptions = [50, 100, 200, 500]
+    const currentIndex = radiusOptions.indexOf(radius)
+    const nextIndex = (currentIndex + 1) % radiusOptions.length
+    setRadius(radiusOptions[nextIndex])
+  }
+  
   //------------------------------------------------//
   //                  UI COMPONENTS                 //
   //------------------------------------------------//
@@ -209,9 +260,11 @@ export default function Page() {
         <SignOutButton />
         */}
         <View style={
-          {position: 'absolute', zIndex: 1, backgroundColor: '#EAEFEF',
+          {position: 'absolute', zIndex: 2, backgroundColor: '#EAEFEF',
           borderRadius: 20, borderColor: '#BFC9D1', borderWidth: 1, width: '100%', height: 350, bottom: 0}
           }>
+
+
             <View style={{flexDirection: 'row', alignItems: 'center', borderColor: '#BFC9D1', borderBottomWidth: 1,
               height: 50, width: '100%'}}>
               <View style={{flexDirection: 'row', alignItems: 'center', marginLeft: 20}}>
@@ -220,25 +273,41 @@ export default function Page() {
               </View>
               <View style={{flexDirection: 'row', alignItems: 'center', marginLeft: 'auto', marginRight: 20}}>
                 <Text style={{fontSize: 16, color: '#25343F'}}>Rango</Text>
-                <Pressable style={{backgroundColor: '#BFC9D1', borderRadius: 20, height: 25, width: 65, marginLeft: 10, justifyContent: 'center', alignItems: 'center'}}>
-                  <Text style={{fontSize: 16, color: '#25343F'}}>50m</Text>
+                <Pressable onPress={handleRadiusChange} style={{backgroundColor: '#BFC9D1', borderRadius: 20, height: 25, width: 65, marginLeft: 10, justifyContent: 'center', alignItems: 'center'}}>
+                  <Text style={{fontSize: 16, color: '#25343F'}}>{radius}m</Text>
                 </Pressable>
               </View>
             </View>
 
+
+
             <View style={{justifyContent: 'center', alignItems: 'center', flex: 1}}>
-              {!nearbyBuses ? (
+              {networkError ? (
+                <View style={{justifyContent: 'center', alignItems: 'center', width: 250, marginBottom: 50}}>
+
+                  <Image source={require('@/assets/images/sad.svg')} style={{width: 42, height: 42}} />
+                  <Text style={{fontSize: 16, color: '#25343F', textAlign: 'center'}}>
+                    No se han podido cargar los datos. Revisa tu conexión e inténtalo de nuevo.
+                  </Text>
+
+                </View>
+              ) : !nearbyBuses ? (
                 <Text style={{fontSize: 16, color: '#25343F'}}>Loading...</Text>
               ) : nearbyBuses.length === 0 ? (
                 <View style={{justifyContent: 'center', alignItems: 'center', width: 250, marginBottom: 50}}>
+
                   <Image source={require('@/assets/images/sad.svg')} style={{width: 42, height: 42}} />
-                  <Text style={{fontSize: 16, color: '#25343F', textAlign: 'center'}}>¡Uh oh! No encontramos paradas cerca de ti</Text>
+                  <Text style={{fontSize: 16, color: '#25343F', textAlign: 'center'}}>
+                    ¡Uh oh! No encontramos paradas cerca de ti
+                  </Text>
                 </View>
               ) : (
               <FlatList
                 style={{width: '100%', padding: 20, marginBottom: 0}}
                 contentContainerStyle={{paddingBottom: 80}}
                 data={nearbyBuses}
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => {
                   console.log('Rendering BusStop - location:', location)
@@ -248,7 +317,7 @@ export default function Page() {
 
             </View>
         </View>
-        <Map />
+        <Map userLocation={location} radius={radius} busStops={nearbyBuses ?? []} />
       </SignedIn>
     </ThemedView>
   )

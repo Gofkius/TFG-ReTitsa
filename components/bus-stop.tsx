@@ -1,4 +1,5 @@
 import { BusStop } from '@/types/busStop'
+import BusStopPoi from '@/components/bus-stop-poi'
 import { Image } from 'expo-image'
 import * as Location from 'expo-location'
 import React, { useMemo } from 'react'
@@ -29,9 +30,9 @@ const calculateDistance = (
   return R * c
 }
 
-// Calculate walking time in minutes based on distance (standard walking speed ~5 km/h)
+// Calculate walking time in minutes based on distance (standard walking speed ~4.5 km/h)
 const calculateWalkingTime = (distanceInMeters: number): number => {
-  const walkingSpeedMPerMin = 83.33 // 5 km/h = 83.33 m/min
+  const walkingSpeedMPerMin = 75 // 4.5 km/h = 75 m/min
   return Math.max(1, Math.round(distanceInMeters / walkingSpeedMPerMin))
 }
 
@@ -66,12 +67,17 @@ const BusStopComponent = ({ item, userLocation }: BusStopComponentProps) => {
                 <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#25343F', maxWidth: '80%' }}>{item.name} </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
                     <Image source={require('@/assets/images/walk-light.svg')} style={{ width: 20, height: 20, marginRight: 2 }} />
-                    <Text style={{ fontSize: 16, color: '#5A6B78' }}>{walkingTime !== null && walkingTime !== undefined ? `${walkingTime} min` : 'Calculating...'}</Text>
+                    <Text style={{ fontSize: 16, color: '#5A6B78' }}>
+                      {walkingTime !== null && walkingTime !== undefined ? 
+                      `Est. ${walkingTime} min.` : 'Calculating...'}
+                    </Text>
                     <View style={{ width: 1, borderColor: '#5A6B78', borderLeftWidth: 1, height: 15, marginLeft: 7, marginRight: 7 }}></View>
-                    <Text style={{ fontSize: 16, color: '#5A6B78' }}>{distance !== null && distance !== undefined ? `${distance}m` : 'Calculating...'}</Text>
+                    <Text style={{ fontSize: 16, color: '#5A6B78' }}>
+                      {distance !== null && distance !== undefined ? `${distance}m` : 'Calculating...'}
+                    </Text>
                 </View>
-                <View style={{ width: 40, height: 40, position: 'absolute', right: 10, top: 2, borderRadius: 8, backgroundColor: '#FFC953', padding: 6, justifyContent: 'center', alignItems: 'center' }}>
-                    <Image source={require('@/assets/images/bus.svg')} style={{ width: 34, height: 34 }} />
+                <View style={{ position: 'absolute', right: 10, top: 2 }}>
+                  <BusStopPoi size={40} />
                 </View>
             </View>
             {item.arrivals && item.arrivals.length > 0 ? (
@@ -82,7 +88,10 @@ const BusStopComponent = ({ item, userLocation }: BusStopComponentProps) => {
                       <Image source={require('@/assets/images/bus-light.svg')} style={{ width: 20, height: 20 }} />
                       <Text style={{ fontSize: 16, color: '#5A6B78', marginRight: 2 }}>{formatLineNumber(arrival.linea)}</Text>
                     </View>
-                    <Text style={{ fontSize: 16, color: '#5A6B78', flexShrink: 1 }}>{`${arrival.minutos} min. - ${arrival.destino}`}</Text>
+                    <Text style={{ fontSize: 16, color: '#5A6B78', flexShrink: 1 }}>
+                      
+                      {arrival.minutos === 0 ? `Ahora - ${arrival.destino}` : `${arrival.minutos} min. - ${arrival.destino}`}
+                    </Text>
                   </View>
                 ))}
               </View>
