@@ -7,12 +7,14 @@ import { Image } from 'expo-image'
 import { Link, Redirect } from 'expo-router'
 import { Pressable, StyleSheet, View } from 'react-native'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { FlatList, Platform, Text } from 'react-native'
 import MapView, { Circle, Marker, PROVIDER_GOOGLE } from 'react-native-maps'
 
 import BusStopComponent from '@/components/bus-stop'
+import BusStopModal from '@/components/bus-stop-modal'
 import BusStopPoi from '@/components/bus-stop-poi'
+import MapRecenterToast from '@/components/map-recenter-toast'
 import * as Location from 'expo-location'
 
   //------------------------------------------------//
@@ -20,7 +22,49 @@ import * as Location from 'expo-location'
   //------------------------------------------------//
 
 export function Map({ userLocation, radius, busStops }: { userLocation?: Location.LocationObjectCoords | null, radius: number, busStops: BusStop[] }) {
+  const mapRef = useRef<MapView | null>(null)
+  const hasCenteredInitially = useRef(false)
+  const [isCenteredOnUser, setIsCenteredOnUser] = useState(true)
 
+  useEffect(() => {
+    if (!hasCenteredInitially.current && userLocation) {
+      const latitudeDelta = Math.max(0.0012, (radius * 2.2) / 111320)
+      const longitudeDelta = latitudeDelta / Math.max(Math.cos((userLocation.latitude * Math.PI) / 180), 0.2)
+      
+      mapRef.current?.animateToRegion(
+        {
+          latitude: userLocation.latitude - latitudeDelta * 0.33,
+          longitude: userLocation.longitude,
+          latitudeDelta,
+          longitudeDelta,
+        },
+        350
+      )
+      setIsCenteredOnUser(true)
+      hasCenteredInitially.current = true
+    }
+  }, [userLocation?.latitude, userLocation?.longitude, radius])
+
+  // Zoom out map when radius changes to display new circle
+  useEffect(() => {
+    if (userLocation) {
+      const latitudeDelta = Math.max(0.0012, (radius * 2.2) / 111320)
+      const longitudeDelta = latitudeDelta / Math.max(Math.cos((userLocation.latitude * Math.PI) / 180), 0.2)
+      
+      mapRef.current?.animateToRegion(
+        {
+          latitude: userLocation.latitude - latitudeDelta * 0.33,
+          longitude: userLocation.longitude,
+          latitudeDelta,
+          longitudeDelta,
+        },
+        350
+      )
+      setIsCenteredOnUser(true)
+    }
+  }, [radius])
+
+  // Early returns after all hooks
   if (!userLocation) {
     return <Text>Loading map...</Text>
   }
@@ -29,7 +73,7 @@ export function Map({ userLocation, radius, busStops }: { userLocation?: Locatio
     return <Text>Maps are only available on Android and iOS</Text>
   }
 
-  const latitudeDelta = Math.max(0.002, (radius * 4) / 111320)
+  const latitudeDelta = Math.max(0.0012, (radius * 2.2) / 111320)
   const longitudeDelta = latitudeDelta / Math.max(Math.cos((userLocation.latitude * Math.PI) / 180), 0.2)
   const hidePoiMapStyle = [
     { featureType: 'poi', stylers: [{ visibility: 'off' }] },
@@ -44,38 +88,83 @@ export function Map({ userLocation, radius, busStops }: { userLocation?: Locatio
     { featureType: 'transit.station', stylers: [{ visibility: 'off' }] },
   ]
 
-  return (
-    <MapView
-      style={{ flex: 1 }}
-      provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-      showsUserLocation
-      showsMyLocationButton
-      showsPointsOfInterest={false}
-      customMapStyle={hidePoiMapStyle}
-      region={{
-        latitude: userLocation.latitude,
+  const centerOffsetMeters = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371000
+    const dLat = ((lat2 - lat1) * Math.PI) / 180
+    const dLon = ((lon2 - lon1) * Math.PI) / 180
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    return R * c
+  }
+
+  const centerMapOnUser = () => {
+    mapRef.current?.animateToRegion(
+      {
+        latitude: userLocation.latitude - latitudeDelta * 0.33,
         longitude: userLocation.longitude,
         latitudeDelta,
         longitudeDelta,
-      }}
-    >
-      {busStops.map((stop) => (
-        <Marker
-          key={stop.id}
-          coordinate={{ latitude: stop.latitude, longitude: stop.longitude }}
-          anchor={{ x: 0.5, y: 0.5 }}
-          tracksViewChanges={false}
-        >
-          <BusStopPoi size={30} />
-        </Marker>
-      ))}
-      <Circle
-        center={{ latitude: userLocation.latitude, longitude: userLocation.longitude }}
-        radius={radius}
-        strokeColor="#53B2FF"
-        fillColor="rgba(83, 178, 255, 0.20)"
-      />
-    </MapView>
+      },
+      350
+    )
+    setIsCenteredOnUser(true)
+  }
+
+  return (
+    <View style={{ flex: 1 }}>
+      <MapView
+        key={busStops.length > 0 ? 'with-stops' : 'no-stops'}
+        ref={mapRef}
+        style={{ flex: 1 }}
+        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+        showsUserLocation
+        showsMyLocationButton={Platform.OS === 'android'}
+        showsPointsOfInterest={false}
+        customMapStyle={hidePoiMapStyle}
+        initialRegion={{
+          latitude: userLocation.latitude - latitudeDelta * 0.33,
+          longitude: userLocation.longitude,
+          latitudeDelta,
+          longitudeDelta,
+        }}
+        onRegionChangeComplete={(region) => {
+          const offsetLatitude = userLocation.latitude - latitudeDelta * 0.33
+          const distanceFromCenteredView = centerOffsetMeters(
+            region.latitude,
+            region.longitude,
+            offsetLatitude,
+            userLocation.longitude
+          )
+
+          // Consider map centered if camera is close to the intended offset position
+          setIsCenteredOnUser(distanceFromCenteredView < 20)
+        }}
+      >
+        {busStops.map((stop) => (
+          <Marker
+            key={stop.id}
+            coordinate={{ latitude: stop.latitude, longitude: stop.longitude }}
+            anchor={{ x: 0.5, y: 0.5 }}
+            tracksViewChanges={false}
+          >
+            <BusStopPoi size={30} />
+          </Marker>
+        ))}
+        <Circle
+          center={{ latitude: userLocation.latitude, longitude: userLocation.longitude }}
+          radius={radius}
+          strokeColor="#53B2FF"
+          fillColor="rgba(83, 178, 255, 0.20)"
+        />
+      </MapView>
+
+      {!isCenteredOnUser ? <MapRecenterToast onPress={centerMapOnUser} label="Recentrar" /> : null}
+    </View>
   )
 }
 
@@ -94,7 +183,11 @@ export default function Page() {
   // State for nearby bus stops and user location
   const [nearbyBuses, setNearbyBuses] = useState<BusStop[]>()
   const [location, setLocation] = useState<Location.LocationObjectCoords | undefined>(undefined)
-  const [radius, setRadius] = useState(50) // Default radius in meters
+  const [radius, setRadius] = useState(100) // Default radius in meters
+
+  // State for modal
+  const [selectedBusStop, setSelectedBusStop] = useState<BusStop | null>(null)
+  const [modalVisible, setModalVisible] = useState(false)
 
   // Context for first load and preferences
   const context = useInitContext();
@@ -110,14 +203,17 @@ export default function Page() {
 
 
 
-  function handleRefresh() {
+  async function handleRefresh() {
     try {
       setRefreshing(true)
       setNetworkError(false)
-      // Re-fetch location and nearby buses
-      if (location) {
-        fetchNearbyBuses()
-      }
+
+      // Force one fresh location read for pull-to-refresh.
+      const currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      })
+      setLocation(currentLocation.coords)
+      fetchNearbyBuses(currentLocation.coords)
     } catch (error) {
       console.error('Error refreshing data:', error)
       setNetworkError(true)
@@ -130,15 +226,10 @@ export default function Page() {
   //      LOCATION AND BUS STOP FETCHING LOGIC.     //
   //------------------------------------------------//
 
-  const getInitialLocation = async () => {
-    const currentLocation = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
-    })
-    setLocation(currentLocation.coords)
-  }
+  const fetchNearbyBuses = async (coords: Location.LocationObjectCoords | undefined = location) => {
+    if (!coords) return
 
-  const fetchNearbyBuses = async () => {
-    const url = 'http://localhost:8080/titsa/cercanas' + `?lat=${location?.latitude}&lng=${location?.longitude}&radio=${radius}`
+    const url = 'http://localhost:8080/titsa/cercanas' + `?lat=${coords.latitude}&lng=${coords.longitude}&radio=${radius}`
 
     try {
       const response = await fetch(
@@ -188,24 +279,56 @@ export default function Page() {
   }
 
   useEffect(() => {
-    getInitialLocation()
-  }, [])
+    let subscription: Location.LocationSubscription | null = null
+    let isMounted = true
 
+    const startLocationTracking = async () => {
+      let granted = status?.granted ?? false
 
-  // Re-request permissions if status changes to not granted
+      if (!granted) {
+        const permissionResult = await requestPermission()
+        granted = permissionResult.granted
+      }
 
-  useEffect(() => {
-    if (!status?.granted) {
-      requestPermission();
+      if (!granted) {
+        return
+      }
+
+      const initialLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      })
+
+      if (!isMounted) return
+      setLocation(initialLocation.coords)
+
+      subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 2000,
+          distanceInterval: 1,
+        },
+        (updatedLocation) => {
+          if (isMounted) {
+            setLocation(updatedLocation.coords)
+          }
+        }
+      )
     }
-  }, [status, requestPermission]);
+
+    startLocationTracking()
+
+    return () => {
+      isMounted = false
+      subscription?.remove()
+    }
+  }, [status?.granted, requestPermission])
 
 
   // Fetch nearby bus stops whenever location changes
 
   useEffect(() => {
     if(location) {
-      fetchNearbyBuses()
+      fetchNearbyBuses(location)
     }
   }, [location, radius])
   
@@ -225,11 +348,24 @@ export default function Page() {
 
 
   function handleRadiusChange() {
-    // Cycle through predefined radius values: 50m, 100m, 200m, 500m
-    const radiusOptions = [50, 100, 200, 500]
+    // Cycle through predefined radius values: 100m, 200m, 500m
+    const radiusOptions = [100, 200, 500]
     const currentIndex = radiusOptions.indexOf(radius)
     const nextIndex = (currentIndex + 1) % radiusOptions.length
     setRadius(radiusOptions[nextIndex])
+  }
+
+  const handleBusStopPress = (busStop: BusStop) => {
+    setSelectedBusStop(busStop)
+    setModalVisible(true)
+  }
+
+  const handleCloseModal = () => {
+    setModalVisible(false)
+  }
+
+  const handleModalDismiss = () => {
+    setSelectedBusStop(null)
   }
   
   //------------------------------------------------//
@@ -311,13 +447,20 @@ export default function Page() {
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => {
                   console.log('Rendering BusStop - location:', location)
-                  return <BusStopComponent item={item} userLocation={location} />
+                  return <BusStopComponent item={item} userLocation={location} onPress={() => handleBusStopPress(item)} />
                 }}
               />)}
 
             </View>
         </View>
         <Map userLocation={location} radius={radius} busStops={nearbyBuses ?? []} />
+        <BusStopModal
+          visible={modalVisible}
+          busStop={selectedBusStop}
+          userLocation={location}
+          onClose={handleCloseModal}
+          onDismiss={handleModalDismiss}
+        />
       </SignedIn>
     </ThemedView>
   )
@@ -354,5 +497,5 @@ const styles = StyleSheet.create({
   image: {
     position: 'absolute',
     bottom: 0,
-  }
+  },
 })

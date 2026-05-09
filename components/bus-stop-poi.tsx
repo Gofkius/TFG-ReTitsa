@@ -19,7 +19,10 @@ export default function BusStopPoi({ size = 40 }: BusStopPoiProps) {
         alignItems: 'center',
       }}
     >
-      <Image source={require('@/assets/images/bus.svg')} style={{ width: iconSize, height: iconSize }} />
+      <Image
+       source={require('@/assets/images/bus.svg')}
+       style={{ width: iconSize, height: iconSize }} 
+       />
     </View>
   )
 }

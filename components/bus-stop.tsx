@@ -3,11 +3,12 @@ import { BusStop } from '@/types/busStop'
 import { Image } from 'expo-image'
 import * as Location from 'expo-location'
 import React, { useMemo } from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 interface BusStopComponentProps {
   item: BusStop
   userLocation?: Location.LocationObjectCoords
+  onPress?: () => void
 }
 
 // Haversine formula to calculate distance between two coordinates
@@ -40,7 +41,7 @@ const formatLineNumber = (line: string): string => {
   return /^\d{2}$/.test(line) ? `0${line}` : line
 }
 
-const BusStopComponent = ({ item, userLocation }: BusStopComponentProps) => {
+const BusStopComponent = ({ item, userLocation, onPress }: BusStopComponentProps) => {
   const routeList = useMemo(() => {
     const fromArrivals = item.arrivals?.map((a) => a.linea) ?? []
     const fromRoutes = item.routes ?? []
@@ -62,7 +63,8 @@ const BusStopComponent = ({ item, userLocation }: BusStopComponentProps) => {
     }
   }, [userLocation, item.latitude, item.longitude])
     return (
-        <View style={{ borderColor: '#BFC9D1', borderWidth: 1, borderRadius: 10, padding: 10, marginBottom: 20 }}>
+        <Pressable onPress={onPress}>
+          <View style={{ borderColor: '#BFC9D1', borderWidth: 1, borderRadius: 10, padding: 10, marginBottom: 20 }}>
             <View style={{ borderBottomColor: '#BFC9D1', borderBottomWidth: 1, paddingBottom: 10 }}>
                 <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#25343F', maxWidth: '80%' }}>{item.name} </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
@@ -108,7 +110,8 @@ const BusStopComponent = ({ item, userLocation }: BusStopComponentProps) => {
                 ) : null}
               </View>
             )}
-        </View>
+          </View>
+        </Pressable>
     )
 }
 
