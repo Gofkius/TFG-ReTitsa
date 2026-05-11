@@ -118,7 +118,6 @@ export function Map({ userLocation, radius, busStops }: { userLocation?: Locatio
   return (
     <View style={{ flex: 1 }}>
       <MapView
-        key={busStops.length > 0 ? 'with-stops' : 'no-stops'}
         ref={mapRef}
         style={{ flex: 1 }}
         provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
@@ -150,7 +149,7 @@ export function Map({ userLocation, radius, busStops }: { userLocation?: Locatio
             key={stop.id}
             coordinate={{ latitude: stop.latitude, longitude: stop.longitude }}
             anchor={{ x: 0.5, y: 0.5 }}
-            tracksViewChanges={false}
+            tracksViewChanges={Platform.OS === 'android'}
           >
             <BusStopPoi size={30} />
           </Marker>
@@ -184,6 +183,10 @@ export default function Page() {
   const [nearbyBuses, setNearbyBuses] = useState<BusStop[]>()
   const [location, setLocation] = useState<Location.LocationObjectCoords | undefined>(undefined)
   const [radius, setRadius] = useState(100) // Default radius in meters
+  const cacheRef = useRef<Record<string, BusStop[]>>({})
+  const inFlightRef = useRef<AbortController | null>(null)
+  const lastFetchAtRef = useRef(0)
+  const lastFetchRadiusRef = useRef(radius)
 
   // State for modal
   const [selectedBusStop, setSelectedBusStop] = useState<BusStop | null>(null)
@@ -226,19 +229,34 @@ export default function Page() {
   //      LOCATION AND BUS STOP FETCHING LOGIC.     //
   //------------------------------------------------//
 
-  const fetchNearbyBuses = async (coords: Location.LocationObjectCoords | undefined = location) => {
+  const fetchNearbyBuses = async (
+    coords: Location.LocationObjectCoords | undefined = location,
+    options: { prefetch?: boolean; radiusOverride?: number } = {}
+  ) => {
     if (!coords) return
 
-    const url = 'http://localhost:8080/titsa/cercanas' + `?lat=${coords.latitude}&lng=${coords.longitude}&radio=${radius}`
+    const baseUrl = 'https://movoapi.gofkius.dev'
+    const radiusValue = options.radiusOverride ?? radius
+    const cacheKey = `${radiusValue}:${coords.latitude.toFixed(4)}:${coords.longitude.toFixed(4)}`
+    const cached = cacheRef.current[cacheKey]
+
+    if (cached && !options.prefetch) {
+      setNearbyBuses(cached)
+    }
+
+    if (!options.prefetch) {
+      inFlightRef.current?.abort()
+      inFlightRef.current = new AbortController()
+    }
+
+    const url = baseUrl + `/titsa/cercanas?lat=${coords.latitude}&lng=${coords.longitude}&radio=${radiusValue}`
 
     try {
-      const response = await fetch(
-        url,
-        {
-          method: 'GET',
-          headers: {'Content-Type': 'application/json'},
-        }
-      )
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {'Content-Type': 'application/json'},
+        signal: options.prefetch ? undefined : inFlightRef.current?.signal,
+      })
       
       if (!response.ok) {
         console.error('Fetch error:', response.status, response.statusText)
@@ -269,9 +287,16 @@ export default function Page() {
         }
       })
 
+      cacheRef.current[cacheKey] = transformedData
       console.log('Transformed buses:', transformedData)
-      setNearbyBuses(transformedData)
+
+      if (!options.prefetch) {
+        setNearbyBuses(transformedData)
+      }
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return
+      }
 
       console.error('Error fetching nearby buses:', error)
       setNetworkError(true)
@@ -292,6 +317,15 @@ export default function Page() {
 
       if (!granted) {
         return
+      }
+
+      const lastKnownLocation = await Location.getLastKnownPositionAsync({
+        maxAge: 30000,
+        requiredAccuracy: 100,
+      })
+
+      if (isMounted && lastKnownLocation?.coords) {
+        setLocation(lastKnownLocation.coords)
       }
 
       const initialLocation = await Location.getCurrentPositionAsync({
@@ -327,8 +361,27 @@ export default function Page() {
   // Fetch nearby bus stops whenever location changes
 
   useEffect(() => {
-    if(location) {
+    if (location) {
+      const now = Date.now()
+      const radiusChanged = radius !== lastFetchRadiusRef.current
+      const shouldFetch = radiusChanged || now - lastFetchAtRef.current >= 30000
+
+      if (!shouldFetch) {
+        return
+      }
+
+      lastFetchAtRef.current = now
+      lastFetchRadiusRef.current = radius
+
       fetchNearbyBuses(location)
+
+      const radiusOptions = [100, 200, 500]
+      const currentIndex = radiusOptions.indexOf(radius)
+      const nextRadius = radiusOptions[(currentIndex + 1) % radiusOptions.length]
+      const previousRadius = radiusOptions[(currentIndex - 1 + radiusOptions.length) % radiusOptions.length]
+
+      void fetchNearbyBuses(location, { prefetch: true, radiusOverride: nextRadius })
+      void fetchNearbyBuses(location, { prefetch: true, radiusOverride: previousRadius })
     }
   }, [location, radius])
   
