@@ -4,6 +4,8 @@ export default function BusLinesLayout() {
   return (
     <Stack>
       <Stack.Screen name="bus-lines" options={{ headerShown: true, title: 'Lineas' }} />
+      <Stack.Screen name="[id]" options={{ headerShown: true, title: 'Detalles' }} />
+      <Stack.Screen name="stop/[stopId]" options={{ headerShown: true, title: 'Parada' }} />
     </Stack>
   )
 }

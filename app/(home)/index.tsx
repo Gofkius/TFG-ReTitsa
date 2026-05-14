@@ -30,7 +30,7 @@ export function Map({ userLocation, radius, busStops }: { userLocation?: Locatio
     if (!hasCenteredInitially.current && userLocation) {
       const latitudeDelta = Math.max(0.0012, (radius * 2.2) / 111320)
       const longitudeDelta = latitudeDelta / Math.max(Math.cos((userLocation.latitude * Math.PI) / 180), 0.2)
-      
+
       mapRef.current?.animateToRegion(
         {
           latitude: userLocation.latitude - latitudeDelta * 0.33,
@@ -64,6 +64,26 @@ export function Map({ userLocation, radius, busStops }: { userLocation?: Locatio
     }
   }, [radius])
 
+    useEffect(() => {
+    if (Platform.OS !== 'ios' || !userLocation) {
+      return
+    }
+
+    const latitudeDelta = Math.max(0.0012, (radius * 2.2) / 111320)
+    const longitudeDelta = latitudeDelta / Math.max(Math.cos((userLocation.latitude * Math.PI) / 180), 0.2)
+    const nudge = latitudeDelta * 0.0001
+
+    mapRef.current?.animateToRegion(
+      {
+        latitude: userLocation.latitude - latitudeDelta * 0.33 + nudge,
+        longitude: userLocation.longitude,
+        latitudeDelta,
+        longitudeDelta,
+      },
+      1
+    )
+  }, [busStops.length, radius, userLocation?.latitude, userLocation?.longitude])
+  
   // Early returns after all hooks
   if (!userLocation) {
     return <Text>Loading map...</Text>
@@ -75,6 +95,13 @@ export function Map({ userLocation, radius, busStops }: { userLocation?: Locatio
 
   const latitudeDelta = Math.max(0.0012, (radius * 2.2) / 111320)
   const longitudeDelta = latitudeDelta / Math.max(Math.cos((userLocation.latitude * Math.PI) / 180), 0.2)
+
+  const validBusStops = busStops.filter(
+    (stop) =>
+      Number.isFinite(stop.latitude) &&
+      Number.isFinite(stop.longitude)
+  )
+
   const hidePoiMapStyle = [
     { featureType: 'poi', stylers: [{ visibility: 'off' }] },
     { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
@@ -118,6 +145,7 @@ export function Map({ userLocation, radius, busStops }: { userLocation?: Locatio
   return (
     <View style={{ flex: 1 }}>
       <MapView
+        key={Platform.OS === 'ios' ? `ios-pois-${validBusStops.length}` : undefined}
         ref={mapRef}
         style={{ flex: 1 }}
         provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
@@ -288,7 +316,6 @@ export default function Page() {
       })
 
       cacheRef.current[cacheKey] = transformedData
-      console.log('Transformed buses:', transformedData)
 
       if (!options.prefetch) {
         setNearbyBuses(transformedData)
@@ -499,7 +526,6 @@ export default function Page() {
                 onRefresh={handleRefresh}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => {
-                  console.log('Rendering BusStop - location:', location)
                   return <BusStopComponent item={item} userLocation={location} onPress={() => handleBusStopPress(item)} />
                 }}
               />)}

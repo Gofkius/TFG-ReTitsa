@@ -4,6 +4,7 @@ import * as Location from 'expo-location'
 import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 
+
 interface BusStopModalProps {
   visible: boolean
   busStop: BusStop | null
@@ -88,36 +89,29 @@ const BusStopModal = ({ visible, busStop, userLocation, onClose, onDismiss }: Bu
   }, [userLocation, busStop?.latitude, busStop?.longitude])
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="none"
-      onRequestClose={handleClose}
-    >
-      <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
-        <Pressable
-          style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}
-          onPress={handleClose}
+<Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
+  <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
+    
+    {/* Backdrop — sits behind, closes on tap */}
+    <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
+
+    {/* Modal — sits on top, touches don't reach the backdrop */}
+    <Animated.View pointerEvents="box-none" style={[styles.modalContainer, { transform: [{ scale: scaleAnim }] }]}>
+      <View style={styles.modal}>
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
         >
-          <Animated.View style={{ transform: [{ scale: scaleAnim }], width: '100%' }}>
-            <Pressable
-              style={styles.modal}
-              onPress={() => {}} // Prevent closing when pressing inside modal
-            >
-          {busStop && (
-            <ScrollView
-              style={styles.content}
-              showsVerticalScrollIndicator={false}
-            >
-              {/* Stop name */}
-              <Text style={styles.stopName}>{busStop.name}</Text>
+          {/* Stop name */}
+              <Text style={styles.stopName}>{busStop?.name}</Text>
 
               {/* Arrivals section */}
-              {busStop.arrivals && busStop.arrivals.length > 0 ? (
+              {busStop?.arrivals && busStop?.arrivals.length > 0 ? (
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Próximos autobuses</Text>
                   <View style={styles.arrivals}>
-                    {busStop.arrivals.map((arrival, index) => (
+                    {busStop?.arrivals.map((arrival, index) => (
                       <View
                         key={`${arrival.linea}-${arrival.destino}-${index}`}
                         style={styles.arrivalCard}
@@ -160,26 +154,32 @@ const BusStopModal = ({ visible, busStop, userLocation, onClose, onDismiss }: Bu
                       </View>
                     ))}
                   </View>
-                  {busStop.direction ? (
+                  {busStop?.direction ? (
                     <Text style={styles.directionText}>
                       Dirección {busStop.direction}
                     </Text>
                   ) : null}
                 </View>
               )}
-            </ScrollView>
-          )}
-            </Pressable>
-          </Animated.View>
-        </Pressable>
-      </Animated.View>
-    </Modal>
+        </ScrollView>
+      </View>
+    </Animated.View>
+
+  </Animated.View>
+</Modal>
   )
 }
 
 export default BusStopModal
 
 const styles = StyleSheet.create({
+  modalContainer: {
+  position: 'absolute',
+  height: '100%',
+  left: 20,
+  right: 20,
+  top: '20%', // or wherever you want it vertically
+},
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.35)',
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#BFC9D1',
     width: '100%',
-    maxHeight: '70%',
+    height: '60%',
     paddingBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },

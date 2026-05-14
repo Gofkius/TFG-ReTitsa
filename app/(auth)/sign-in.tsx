@@ -4,7 +4,7 @@ import { useSignIn } from '@clerk/clerk-expo'
 import type { EmailCodeFactor } from '@clerk/types'
 import { Link, useRouter } from 'expo-router'
 import * as React from 'react'
-import { Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { Image, Pressable, StyleSheet, TextInput, View } from 'react-native'
 
 export default function Page() {
   const { signIn, setActive, isLoaded } = useSignIn()
@@ -107,15 +107,15 @@ export default function Page() {
     return (
       <ThemedView style={styles.container}>
         <ThemedText type="title" style={styles.title}>
-          Verify your email
+          Verificación de correo electrónico
         </ThemedText>
         <ThemedText style={styles.description}>
-          A verification code has been sent to your email.
+          Un código de verificación ha sido enviado a tu correo electrónico. Por favor, introdúcelo a continuación para completar el inicio de sesión.
         </ThemedText>
         <TextInput
           style={styles.input}
           value={code}
-          placeholder="Enter verification code"
+          placeholder="Introduce el código de verificación"
           placeholderTextColor="#666666"
           onChangeText={(code) => setCode(code)}
           keyboardType="numeric"
@@ -124,7 +124,7 @@ export default function Page() {
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
           onPress={onVerifyPress}
         >
-          <ThemedText style={styles.buttonText}>Verify</ThemedText>
+          <ThemedText style={styles.buttonText}>Verificar</ThemedText>
         </Pressable>
       </ThemedView>
     )
@@ -133,23 +133,23 @@ export default function Page() {
   return (
     <ThemedView style={styles.container}>
       <ThemedText type="title" style={styles.title}>
-        Sign in
+        Iniciar sesión
       </ThemedText>
-      <ThemedText style={styles.label}>Email address</ThemedText>
+      <ThemedText style={styles.label}>Correo Electrónico</ThemedText>
       <TextInput
         style={styles.input}
         autoCapitalize="none"
         value={emailAddress}
-        placeholder="Enter email"
+        placeholder="Introduce tu correo electrónico"
         placeholderTextColor="#666666"
         onChangeText={(emailAddress) => setEmailAddress(emailAddress)}
         keyboardType="email-address"
       />
-      <ThemedText style={styles.label}>Password</ThemedText>
+      <ThemedText style={styles.label}>Contraseña</ThemedText>
       <TextInput
         style={styles.input}
         value={password}
-        placeholder="Enter password"
+        placeholder="Introduce tu contraseña"
         placeholderTextColor="#666666"
         secureTextEntry={true}
         onChangeText={(password) => setPassword(password)}
@@ -163,26 +163,33 @@ export default function Page() {
         onPress={onSignInPress}
         disabled={!emailAddress || !password}
       >
-        <ThemedText style={styles.buttonText}>Sign in</ThemedText>
+        <ThemedText style={styles.buttonText}>Iniciar sesión</ThemedText>
       </Pressable>
       <View style={styles.linkContainer}>
-        <ThemedText>Don't have an account? </ThemedText>
+        <ThemedText>¿No tienes una cuenta? </ThemedText>
         <Link href="/sign-up">
-          <ThemedText type="link">Sign up</ThemedText>
+          <ThemedText type="link">Regístrate</ThemedText>
         </Link>
       </View>
+      <Image 
+          source={require('@/assets/images/firstLoad.png')} 
+          style={styles.image}
+      />
     </ThemedView>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: '#EAEFEF',
+    justifyContent: 'center',
     flex: 1,
     padding: 20,
     gap: 12,
   },
   title: {
-    marginBottom: 8,
+    alignSelf: 'center',
+    marginBottom: 20,
   },
   description: {
     fontSize: 14,
@@ -202,7 +209,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   button: {
-    backgroundColor: '#0a7ea4',
+    backgroundColor: '#25343F',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -225,4 +232,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
     alignItems: 'center',
   },
+  image: {
+    position: 'absolute',
+    bottom: 0,
+  }
 })

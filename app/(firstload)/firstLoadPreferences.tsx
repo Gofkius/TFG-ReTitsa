@@ -12,19 +12,19 @@ const firstLoadStart = () => {
   function handleTranvia(){
     context.setFirstLoad(false);
     context.setPreferences('tram');
-    router.replace('/');
+    router.replace('/sign-up');
   }
   
   function handleGuagua(){
     context.setFirstLoad(false);
     context.setPreferences('bus');
-    router.replace('/');
+    router.replace('/sign-up');
   }
 
   function handleAmbos(){
     context.setFirstLoad(false);
     context.setPreferences('both');
-    router.replace('/');
+    router.replace('/sign-up');
   }
 
 return (
@@ -32,10 +32,12 @@ return (
         <Text style={styles.title}>¿Con cual sueles viajar? 🚃</Text>
         <View style={{gap: 0, padding: 0}}>
             <Pressable style={styles.buttonTransporte} onPress={handleTranvia}>
-                <Text style={styles.textButton}>Tranvía Placeholder</Text>
+                <Image source={require('@/assets/images/tram-config.png')} style={{position: 'absolute', width: 230, height: 96, left: 120}} />
+                <Text style={[styles.textButton]}>Tranvía</Text>
             </Pressable>
             <Pressable style={styles.buttonTransporte} onPress={handleGuagua}>
-                <Text style={styles.textButton}>Guagua Placeholder</Text>
+                <Image source={require('@/assets/images/bus-config.png')} style={{position: 'absolute', width: 180, height: 96, left: -28}} />
+                <Text style={[styles.textButton, {marginLeft: 150}]}>Guagua</Text>
             </Pressable>
         </View>
         <Pressable style={styles.buttonAmbos} onPress={handleAmbos}>
@@ -60,12 +62,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonTransporte: {
+    overflow: 'hidden',
+    flexDirection: 'row',
     backgroundColor: '#FFC953',
     padding: 16,
     borderRadius: 27,
     alignItems: 'center',
     width: '100%',
-    height: 130,
+    height: 125,
     marginTop: 20,
   },
   buttonAmbos: {
@@ -89,7 +93,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   textButton: {
-    fontSize: 25,
+    fontSize: 24,
     fontWeight: 'bold',
   },
   image: {

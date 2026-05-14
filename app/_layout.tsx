@@ -83,7 +83,7 @@ export default function RootLayout() {
                     borderRadius: 30,
                     marginTop: 20
                     }}>
-                    <Image source={require('@/assets/images/star-navbar.svg')} style={{ width: size, height: size }} />
+                    <Image source={require('@/assets/images/list-navbar.svg')} style={{ width: size, height: size }} />
                   </View>
                 ),
               }} 

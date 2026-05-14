@@ -3,7 +3,7 @@ import { ThemedView } from '@/components/themed-view'
 import { useSignUp } from '@clerk/clerk-expo'
 import { Link, useRouter } from 'expo-router'
 import * as React from 'react'
-import { Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { Image, Pressable, StyleSheet, TextInput, View } from 'react-native'
 
 export default function Page() {
   const { isLoaded, signUp, setActive } = useSignUp()
@@ -82,15 +82,15 @@ export default function Page() {
     return (
       <ThemedView style={styles.container}>
         <ThemedText type="title" style={styles.title}>
-          Verify your email
+          Verificación de correo electrónico
         </ThemedText>
         <ThemedText style={styles.description}>
-          A verification code has been sent to your email.
+          Un código de verificación ha sido enviado a tu correo electrónico. Por favor, introdúcelo a continuación para completar el registro.
         </ThemedText>
         <TextInput
           style={styles.input}
           value={code}
-          placeholder="Enter your verification code"
+          placeholder="Introduce el código de verificación"
           placeholderTextColor="#666666"
           onChangeText={(code) => setCode(code)}
           keyboardType="numeric"
@@ -99,7 +99,7 @@ export default function Page() {
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
           onPress={onVerifyPress}
         >
-          <ThemedText style={styles.buttonText}>Verify</ThemedText>
+          <ThemedText style={styles.buttonText}>Verificar</ThemedText>
         </Pressable>
       </ThemedView>
     )
@@ -108,31 +108,31 @@ export default function Page() {
   return (
     <ThemedView style={styles.container}>
       <ThemedText type="title" style={styles.title}>
-        Sign up
+        Solo falta crear una cuenta para ti! 🎉
       </ThemedText>
-      <ThemedText style={styles.label}>Email address</ThemedText>
+      <ThemedText style={styles.label}>Correo Electrónico</ThemedText>
       <TextInput
         style={styles.input}
         autoCapitalize="none"
         value={emailAddress}
-        placeholder="Enter email"
+        placeholder="Introduce tu correo electrónico"
         placeholderTextColor="#666666"
         onChangeText={(email) => setEmailAddress(email)}
         keyboardType="email-address"
       />
-      <ThemedText style={styles.label}>Username</ThemedText>
+      <ThemedText style={styles.label}>Nombre de Usuario</ThemedText>
       <TextInput
         style={styles.input}
         value={username}
-        placeholder="Enter username"
+        placeholder="Introduce un nombre de usuario"
         placeholderTextColor="#666666"
         onChangeText={(username) => setUsername(username)}
       />
-      <ThemedText style={styles.label}>Password</ThemedText>
+      <ThemedText style={styles.label}>Contraseña</ThemedText>
       <TextInput
         style={styles.input}
         value={password}
-        placeholder="Enter password"
+        placeholder="Introduce tu contraseña"
         placeholderTextColor="#666666"
         secureTextEntry={true}
         onChangeText={(password) => setPassword(password)}
@@ -146,26 +146,33 @@ export default function Page() {
         onPress={onSignUpPress}
         disabled={!emailAddress || !password || !username}
       >
-        <ThemedText style={styles.buttonText}>Continue</ThemedText>
+        <ThemedText style={styles.buttonText}>Continuar</ThemedText>
       </Pressable>
       <View style={styles.linkContainer}>
-        <ThemedText>Have an account? </ThemedText>
+        <ThemedText>Ya tienes una cuenta? </ThemedText>
         <Link href="/sign-in">
-          <ThemedText type="link">Sign in</ThemedText>
+          <ThemedText type="link">Iniciar sesión</ThemedText>
         </Link>
       </View>
+      <Image 
+          source={require('@/assets/images/firstLoad.png')} 
+          style={styles.image}
+      />
     </ThemedView>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: '#EAEFEF',
+    justifyContent: 'center',
     flex: 1,
     padding: 20,
     gap: 12,
   },
   title: {
-    marginBottom: 8,
+    textAlign: 'center',
+    marginBottom: 20,
   },
   description: {
     fontSize: 14,
@@ -185,7 +192,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   button: {
-    backgroundColor: '#0a7ea4',
+    backgroundColor: '#25343F',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -203,9 +210,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   linkContainer: {
+    alignSelf: 'center',
     flexDirection: 'row',
     gap: 4,
     marginTop: 12,
     alignItems: 'center',
   },
+  image: {
+    position: 'absolute',
+    bottom: 0,
+  }
 })
