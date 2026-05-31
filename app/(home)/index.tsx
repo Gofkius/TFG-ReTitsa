@@ -3,197 +3,19 @@ import { ThemedView } from '@/components/themed-view'
 import { useInitContext } from '@/context/initContext'
 import { BusStop } from '@/types/busStop'
 import { SignedIn, SignedOut, useSession, useUser } from '@clerk/clerk-expo'
+import BottomSheet, { BottomSheetFlatList, BottomSheetView } from '@gorhom/bottom-sheet'
 import { Image } from 'expo-image'
-import { Link, Redirect } from 'expo-router'
-import { Pressable, StyleSheet, View } from 'react-native'
-
-import { useEffect, useRef, useState } from 'react'
-import { FlatList, Platform, Text } from 'react-native'
-import MapView, { Circle, Marker, PROVIDER_GOOGLE } from 'react-native-maps'
+import { Redirect } from 'expo-router'
+import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 
 import BusStopComponent from '@/components/bus-stop'
 import BusStopModal from '@/components/bus-stop-modal'
-import BusStopPoi from '@/components/bus-stop-poi'
-import MapRecenterToast from '@/components/map-recenter-toast'
+import Map from '@/components/map'
 import * as Location from 'expo-location'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Text } from 'react-native'
+import { useSharedValue } from 'react-native-reanimated'
 
-  //------------------------------------------------//
-  //            INTEGRATED MAP COMPONENT            //
-  //------------------------------------------------//
-
-export function Map({ userLocation, radius, busStops }: { userLocation?: Location.LocationObjectCoords | null, radius: number, busStops: BusStop[] }) {
-  const mapRef = useRef<MapView | null>(null)
-  const hasCenteredInitially = useRef(false)
-  const [isCenteredOnUser, setIsCenteredOnUser] = useState(true)
-
-  useEffect(() => {
-    if (!hasCenteredInitially.current && userLocation) {
-      const latitudeDelta = Math.max(0.0012, (radius * 2.2) / 111320)
-      const longitudeDelta = latitudeDelta / Math.max(Math.cos((userLocation.latitude * Math.PI) / 180), 0.2)
-
-      mapRef.current?.animateToRegion(
-        {
-          latitude: userLocation.latitude - latitudeDelta * 0.33,
-          longitude: userLocation.longitude,
-          latitudeDelta,
-          longitudeDelta,
-        },
-        350
-      )
-      setIsCenteredOnUser(true)
-      hasCenteredInitially.current = true
-    }
-  }, [userLocation?.latitude, userLocation?.longitude, radius])
-
-  // Zoom out map when radius changes to display new circle
-  useEffect(() => {
-    if (userLocation) {
-      const latitudeDelta = Math.max(0.0012, (radius * 2.2) / 111320)
-      const longitudeDelta = latitudeDelta / Math.max(Math.cos((userLocation.latitude * Math.PI) / 180), 0.2)
-      
-      mapRef.current?.animateToRegion(
-        {
-          latitude: userLocation.latitude - latitudeDelta * 0.33,
-          longitude: userLocation.longitude,
-          latitudeDelta,
-          longitudeDelta,
-        },
-        350
-      )
-      setIsCenteredOnUser(true)
-    }
-  }, [radius])
-
-    useEffect(() => {
-    if (Platform.OS !== 'ios' || !userLocation) {
-      return
-    }
-
-    const latitudeDelta = Math.max(0.0012, (radius * 2.2) / 111320)
-    const longitudeDelta = latitudeDelta / Math.max(Math.cos((userLocation.latitude * Math.PI) / 180), 0.2)
-    const nudge = latitudeDelta * 0.0001
-
-    mapRef.current?.animateToRegion(
-      {
-        latitude: userLocation.latitude - latitudeDelta * 0.33 + nudge,
-        longitude: userLocation.longitude,
-        latitudeDelta,
-        longitudeDelta,
-      },
-      1
-    )
-  }, [busStops.length, radius, userLocation?.latitude, userLocation?.longitude])
-  
-  // Early returns after all hooks
-  if (!userLocation) {
-    return <Text>Loading map...</Text>
-  }
-
-  if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
-    return <Text>Maps are only available on Android and iOS</Text>
-  }
-
-  const latitudeDelta = Math.max(0.0012, (radius * 2.2) / 111320)
-  const longitudeDelta = latitudeDelta / Math.max(Math.cos((userLocation.latitude * Math.PI) / 180), 0.2)
-
-  const validBusStops = busStops.filter(
-    (stop) =>
-      Number.isFinite(stop.latitude) &&
-      Number.isFinite(stop.longitude)
-  )
-
-  const hidePoiMapStyle = [
-    { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-    { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
-    { featureType: 'poi.attraction', stylers: [{ visibility: 'off' }] },
-    { featureType: 'poi.government', stylers: [{ visibility: 'off' }] },
-    { featureType: 'poi.medical', stylers: [{ visibility: 'off' }] },
-    { featureType: 'poi.park', stylers: [{ visibility: 'off' }] },
-    { featureType: 'poi.place_of_worship', stylers: [{ visibility: 'off' }] },
-    { featureType: 'poi.school', stylers: [{ visibility: 'off' }] },
-    { featureType: 'poi.sports_complex', stylers: [{ visibility: 'off' }] },
-    { featureType: 'transit.station', stylers: [{ visibility: 'off' }] },
-  ]
-
-  const centerOffsetMeters = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371000
-    const dLat = ((lat2 - lat1) * Math.PI) / 180
-    const dLon = ((lon2 - lon1) * Math.PI) / 180
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2)
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    return R * c
-  }
-
-  const centerMapOnUser = () => {
-    mapRef.current?.animateToRegion(
-      {
-        latitude: userLocation.latitude - latitudeDelta * 0.33,
-        longitude: userLocation.longitude,
-        latitudeDelta,
-        longitudeDelta,
-      },
-      350
-    )
-    setIsCenteredOnUser(true)
-  }
-
-  return (
-    <View style={{ flex: 1 }}>
-      <MapView
-        key={Platform.OS === 'ios' ? `ios-pois-${validBusStops.length}` : undefined}
-        ref={mapRef}
-        style={{ flex: 1 }}
-        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-        showsUserLocation
-        showsMyLocationButton={Platform.OS === 'android'}
-        showsPointsOfInterest={false}
-        customMapStyle={hidePoiMapStyle}
-        initialRegion={{
-          latitude: userLocation.latitude - latitudeDelta * 0.33,
-          longitude: userLocation.longitude,
-          latitudeDelta,
-          longitudeDelta,
-        }}
-        onRegionChangeComplete={(region) => {
-          const offsetLatitude = userLocation.latitude - latitudeDelta * 0.33
-          const distanceFromCenteredView = centerOffsetMeters(
-            region.latitude,
-            region.longitude,
-            offsetLatitude,
-            userLocation.longitude
-          )
-
-          // Consider map centered if camera is close to the intended offset position
-          setIsCenteredOnUser(distanceFromCenteredView < 20)
-        }}
-      >
-        {busStops.map((stop) => (
-          <Marker
-            key={stop.id}
-            coordinate={{ latitude: stop.latitude, longitude: stop.longitude }}
-            anchor={{ x: 0.5, y: 0.5 }}
-            tracksViewChanges={Platform.OS === 'android'}
-          >
-            <BusStopPoi size={30} />
-          </Marker>
-        ))}
-        <Circle
-          center={{ latitude: userLocation.latitude, longitude: userLocation.longitude }}
-          radius={radius}
-          strokeColor="#53B2FF"
-          fillColor="rgba(83, 178, 255, 0.20)"
-        />
-      </MapView>
-
-      {!isCenteredOnUser ? <MapRecenterToast onPress={centerMapOnUser} label="Recentrar" /> : null}
-    </View>
-  )
-}
 
 export default function Page() {
   // If your user isn't appearing as signed in,
@@ -215,6 +37,9 @@ export default function Page() {
   const inFlightRef = useRef<AbortController | null>(null)
   const lastFetchAtRef = useRef(0)
   const lastFetchRadiusRef = useRef(radius)
+  const lastFetchLocationRef = useRef<Location.LocationObjectCoords | null>(null)
+  const [currentBottomSheetSnapPoint, setCurrentBottomSheetSnapPoint] = useState<string>('50%')
+  const animatedIndex = useSharedValue(0)
 
   // State for modal
   const [selectedBusStop, setSelectedBusStop] = useState<BusStop | null>(null)
@@ -231,6 +56,32 @@ export default function Page() {
 
   // State for network error
   const [networkError, setNetworkError] = useState(false)
+
+  // Helper to convert HSL to RGB format (guarantees perfect cross-platform support in React Native)
+  const hslToRgb = (h: number, s: number, l: number): string => {
+    s /= 100;
+    l /= 100;
+    const k = (n: number) => (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const f = (n: number) =>
+      l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+    return `rgb(${Math.round(255 * f(0))}, ${Math.round(255 * f(8))}, ${Math.round(255 * f(4))})`;
+  }
+
+  const busLineColors = useMemo(() => {
+    if (!nearbyBuses) return []
+    const totalStops = nearbyBuses.length
+    const startColor = '#FFC953'
+    const startHue = 10
+    
+    return nearbyBuses.map((_, index) => {
+      if (index === 0) {
+        return startColor
+      }
+      const hue = totalStops > 1 ? (startHue + (index * (360 / totalStops))) % 360 : startHue
+      return hslToRgb(hue, 85, 70)
+    })
+  }, [nearbyBuses])
 
 
 
@@ -385,20 +236,45 @@ export default function Page() {
   }, [status?.granted, requestPermission])
 
 
-  // Fetch nearby bus stops whenever location changes
+  // Fetch nearby bus stops whenever radius changes or we get a new location, but only if we have a location to fetch for
 
   useEffect(() => {
     if (location) {
       const now = Date.now()
       const radiusChanged = radius !== lastFetchRadiusRef.current
-      const shouldFetch = radiusChanged || now - lastFetchAtRef.current >= 30000
+      
+      // Fórmula Haversine rápida para calcular metros entre dos puntos GPS
+      const calcDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 6371e3; // Radio de la tierra en metros
+        const dLat = ((lat2 - lat1) * Math.PI) / 180
+        const dLon = ((lon2 - lon1) * Math.PI) / 180
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2)
+        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))
+      }
+
+      let distanceMoved = 0
+      if (lastFetchLocationRef.current) {
+        distanceMoved = calcDistance(
+          location.latitude, location.longitude,
+          lastFetchLocationRef.current.latitude, lastFetchLocationRef.current.longitude
+        )
+      }
+
+      const isFirstFetch = !lastFetchLocationRef.current // ¿Es la primera vez que abre la app?
+      const hasMovedSignificantly = distanceMoved > 50 // ¿Caminó/condujo más de 50 metros?
+      const isStandingStillButNeedsUpdate = (now - lastFetchAtRef.current >= 45000) // 45 segs para actualizar tiempos de llegada
+
+      const shouldFetch = isFirstFetch || radiusChanged || hasMovedSignificantly || isStandingStillButNeedsUpdate
 
       if (!shouldFetch) {
-        return
+        return // El GPS se movió un par de metros solo, ignoramos el re-render.
       }
 
       lastFetchAtRef.current = now
       lastFetchRadiusRef.current = radius
+      lastFetchLocationRef.current = location // Guardamos dónde estábamos en esta petición
 
       fetchNearbyBuses(location)
 
@@ -413,6 +289,8 @@ export default function Page() {
   }, [location, radius])
   
   // Load and first load logic
+
+  const snapPoints = useMemo(() => ['50%','100%'], []);
 
   if(!context.firstLoadReady){
     return (
@@ -454,33 +332,85 @@ export default function Page() {
 
   return (
     <ThemedView style={styles.container}>
-      <SignedOut>
-        <Link href="/(auth)/sign-in">
-          <ThemedText>Sign in</ThemedText>
-        </Link>
-        <Link href="/(auth)/sign-up">
-          <ThemedText>Sign up</ThemedText>
-        </Link>
-      </SignedOut>
-      {/* Show the sign-out button when the user is signed in */}
-      <SignedIn>
-        {/*
-        <ThemedText>Hello {user?.emailAddresses[0].emailAddress}</ThemedText>
-        <ThemedText>Session ID: {session?.id}</ThemedText>
-        <ThemedText>First Load: {context.firstLoad ? 'true' : 'false'}</ThemedText>
-        <ThemedText>Preferences: {context.preferences ? context.preferences : 'None'}</ThemedText>
-        <Button title="Clear first load" onPress={() => {
-          context.setFirstLoad(true) 
-          context.setPreferences("")} } 
-        />
-        <SignOutButton />
-        */}
-        <View style={
-          {position: 'absolute', zIndex: 2, backgroundColor: '#EAEFEF',
-          borderRadius: 20, borderColor: '#BFC9D1', borderWidth: 1, width: '100%', height: 350, bottom: 0}
+
+        <View
+          style={{            
+            flexDirection: 'row', 
+            width: '90%',
+            height: 45,
+            position: 'absolute', 
+            top: 80, 
+            zIndex: 2,
+            borderRadius: 20, 
+            alignSelf: 'center',
+          }}
+        >
+          <View style={{
+            flex: 1,
+            }}>
+            <TextInput placeholder="Nombre de parada" style={{
+              flex: 1,
+              width: '95%',
+              padding: 10,
+              borderRadius: 20,
+              backgroundColor: '#EAEFEF', 
+              borderColor: '#BFC9D1',
+              borderWidth: 1,
+            }} />
+          </View>
+          <SignedOut>
+            <Pressable style={{
+              backgroundColor: '#EAEFEF',
+              borderColor: '#BFC9D1',
+              borderWidth: 1,
+              borderRadius: 50,
+              height: 45,
+              width: 45,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+              <Text style={{color: '#25343F'}}>Out</Text>
+            </Pressable>
+          </SignedOut>
+          <SignedIn>
+              <Pressable style={{
+              backgroundColor: '#EAEFEF',
+              borderColor: '#BFC9D1',
+              borderWidth: 1,
+              borderRadius: 50,
+              height: 45,
+              width: 45,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+              <Text style={{color: '#25343F'}}>In</Text>
+            </Pressable>
+          </SignedIn>
+        </View>
+
+        <Map userLocation={location} radius={radius} busStops={nearbyBuses ?? []} busLineColors={busLineColors} onBusStopPress={handleBusStopPress} animatedIndex={animatedIndex} />
+        <BottomSheet
+          index={1} 
+          snapPoints={snapPoints}
+          animatedIndex={animatedIndex}
+          onAnimate={(fromIndex, toIndex) => {
+            setCurrentBottomSheetSnapPoint(toIndex === 0 ? '50%' : '100%')
+          }}
+          onChange={(index) => {
+            setCurrentBottomSheetSnapPoint(index === 0 ? '50%' : '100%')
+          }}
+          enableOverDrag={false}
+          enableDynamicSizing={false}
+          topInset={140}
+          style={{zIndex: 10, elevation: 10}}
+          backgroundStyle={
+          {
+            backgroundColor: '#EAEFEF',
+            borderRadius: 20,
+            borderColor: '#BFC9D1',
+            borderWidth: 1,
+          }
           }>
-
-
             <View style={{flexDirection: 'row', alignItems: 'center', borderColor: '#BFC9D1', borderBottomWidth: 1,
               height: 50, width: '100%'}}>
               <View style={{flexDirection: 'row', alignItems: 'center', marginLeft: 20}}>
@@ -494,45 +424,39 @@ export default function Page() {
                 </Pressable>
               </View>
             </View>
-
-
-
-            <View style={{justifyContent: 'center', alignItems: 'center', flex: 1}}>
               {networkError ? (
-                <View style={{justifyContent: 'center', alignItems: 'center', width: 250, marginBottom: 50}}>
+                <BottomSheetView style={{justifyContent: 'center', alignItems: 'center', width: 250, marginBottom: 50}}>
 
                   <Image source={require('@/assets/images/sad.svg')} style={{width: 42, height: 42}} />
                   <Text style={{fontSize: 16, color: '#25343F', textAlign: 'center'}}>
                     No se han podido cargar los datos. Revisa tu conexión e inténtalo de nuevo.
                   </Text>
 
-                </View>
+                </BottomSheetView>
               ) : !nearbyBuses ? (
                 <Text style={{fontSize: 16, color: '#25343F'}}>Loading...</Text>
               ) : nearbyBuses.length === 0 ? (
-                <View style={{justifyContent: 'center', alignItems: 'center', width: 250, marginBottom: 50}}>
+                <BottomSheetView style={{justifyContent: 'center', alignItems: 'center', width: 250, marginBottom: 50}}>
 
                   <Image source={require('@/assets/images/sad.svg')} style={{width: 42, height: 42}} />
                   <Text style={{fontSize: 16, color: '#25343F', textAlign: 'center'}}>
                     ¡Uh oh! No encontramos paradas cerca de ti
                   </Text>
-                </View>
+                </BottomSheetView>
               ) : (
-              <FlatList
+              <BottomSheetFlatList
                 style={{width: '100%', padding: 20, marginBottom: 0}}
                 contentContainerStyle={{paddingBottom: 80}}
                 data={nearbyBuses}
                 refreshing={refreshing}
                 onRefresh={handleRefresh}
                 keyExtractor={(item) => item.id}
-                renderItem={({ item }) => {
-                  return <BusStopComponent item={item} userLocation={location} onPress={() => handleBusStopPress(item)} />
+                renderItem={({ item, index }) => {
+                  return <BusStopComponent item={item} userLocation={location} onPress={() => handleBusStopPress(item)} color={busLineColors[index]} />
                 }}
               />)}
+        </BottomSheet>
 
-            </View>
-        </View>
-        <Map userLocation={location} radius={radius} busStops={nearbyBuses ?? []} />
         <BusStopModal
           visible={modalVisible}
           busStop={selectedBusStop}
@@ -540,7 +464,6 @@ export default function Page() {
           onClose={handleCloseModal}
           onDismiss={handleModalDismiss}
         />
-      </SignedIn>
     </ThemedView>
   )
 }

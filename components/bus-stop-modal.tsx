@@ -140,25 +140,11 @@ const BusStopModal = ({ visible, busStop, userLocation, onClose, onDismiss }: Bu
                   </View>
                 </View>
               ) : (
-                <View style={styles.section}>
-                  <View style={styles.routeRow}>
-                    {routeList.map((route) => (
-                      <View key={route} style={styles.lineBadge}>
-                        <Image
-                          source={require('@/assets/images/bus-light.svg')}
-                          style={styles.busIcon}
-                        />
-                        <Text style={styles.lineText}>
-                          {formatLineNumber(route)}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                  {busStop?.direction ? (
-                    <Text style={styles.directionText}>
-                      Dirección {busStop.direction}
-                    </Text>
-                  ) : null}
+                <View style={{flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: '50%'}}>
+                  <Image source={require('@/assets/images/sad.svg')} style={{width: 42, height: 42}} />
+                  <Text style={{fontSize: 16, color: '#25343F', textAlign: 'center'}}>
+                    ¡Uh oh! No hay autobuses en este momento
+                  </Text>
                 </View>
               )}
         </ScrollView>
@@ -257,6 +243,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#25343F',
     marginBottom: 10,
+    textAlign: 'center'
   },
 
   /* Arrival cards */

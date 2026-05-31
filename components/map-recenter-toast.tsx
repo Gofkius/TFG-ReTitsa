@@ -48,8 +48,7 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     alignSelf: 'center',
-    bottom: 360,
-    zIndex: 3,
+    bottom: 370,
   },
   pressable: {
     minWidth: 120,
@@ -65,7 +64,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
-    elevation: 3,
   },
   text: {
     color: '#25343F',

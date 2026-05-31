@@ -9,6 +9,7 @@ interface BusStopComponentProps {
   item: BusStop
   userLocation?: Location.LocationObjectCoords
   onPress?: () => void
+  color?: string
 }
 
 // Haversine formula to calculate distance between two coordinates
@@ -41,7 +42,7 @@ const formatLineNumber = (line: string): string => {
   return /^\d{2}$/.test(line) ? `0${line}` : line
 }
 
-const BusStopComponent = ({ item, userLocation, onPress }: BusStopComponentProps) => {
+const BusStopComponent = ({ item, userLocation, onPress, color }: BusStopComponentProps) => {
   const routeList = useMemo(() => {
     const fromArrivals = item.arrivals?.map((a) => a.linea) ?? []
     const fromRoutes = item.routes ?? []
@@ -79,7 +80,7 @@ const BusStopComponent = ({ item, userLocation, onPress }: BusStopComponentProps
                     </Text>
                 </View>
                 <View style={{ position: 'absolute', right: 10, top: 2 }}>
-                  <BusStopPoi size={40} />
+                  <BusStopPoi size={40} color={color} />
                 </View>
             </View>
             {item.arrivals && item.arrivals.length > 0 ? (

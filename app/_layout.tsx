@@ -7,6 +7,7 @@ import { Image } from 'expo-image'
 import { Tabs } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { View } from 'react-native'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -16,11 +17,12 @@ export default function RootLayout() {
   const colorScheme = useColorScheme()
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <ClerkProvider tokenCache={tokenCache}>
-        <InitContextProvider>
-          <Tabs
-            screenOptions={{
+    <GestureHandlerRootView>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <ClerkProvider tokenCache={tokenCache}>
+          <InitContextProvider>
+            <Tabs
+              screenOptions={{
               tabBarActiveTintColor: '#1C1E21',
               tabBarShowLabel: false,
               tabBarItemStyle: {
@@ -152,5 +154,6 @@ export default function RootLayout() {
         </InitContextProvider>
       </ClerkProvider>
     </ThemeProvider>
+    </GestureHandlerRootView>
   )
 }

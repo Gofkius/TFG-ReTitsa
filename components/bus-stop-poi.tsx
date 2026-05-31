@@ -3,9 +3,10 @@ import { View } from 'react-native'
 
 type BusStopPoiProps = {
   size?: number
+  color?: string
 }
 
-export default function BusStopPoi({ size = 40 }: BusStopPoiProps) {
+export default function BusStopPoi({ size = 40, color }: BusStopPoiProps) {
   const iconSize = Math.round(size * 0.85)
 
   return (
@@ -14,7 +15,7 @@ export default function BusStopPoi({ size = 40 }: BusStopPoiProps) {
         width: size,
         height: size,
         borderRadius: Math.round(size * 0.2),
-        backgroundColor: '#FFC953',
+        backgroundColor: color ? color : '#FFC953',
         justifyContent: 'center',
         alignItems: 'center',
       }}
