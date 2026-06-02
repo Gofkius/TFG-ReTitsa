@@ -1,3 +1,4 @@
+import { BlurOverlay } from '@/components/blurOverlay'
 import InitContextProvider from '@/context/initContext'
 import { useColorScheme } from '@/hooks/use-color-scheme'
 import { ClerkProvider } from '@clerk/clerk-expo'
@@ -45,6 +46,8 @@ export default function RootLayout() {
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.2,
                 shadowRadius: 4,
+                elevation: 5, // For Android
+                zIndex: 10,   // For iOS
               },
             }}
           >
@@ -150,6 +153,7 @@ export default function RootLayout() {
               }} 
             />
           </Tabs>
+          <BlurOverlay />
           <StatusBar style="auto" />
         </InitContextProvider>
       </ClerkProvider>

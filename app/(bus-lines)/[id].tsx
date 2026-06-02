@@ -1,5 +1,6 @@
 import { useUser } from '@clerk/clerk-expo'
 import MaterialIcons from '@expo/vector-icons/MaterialIcons'
+import { Image } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
@@ -17,7 +18,7 @@ const BusStop = ({ data, isFavorite, onToggleFavorite }: {
         onPress={() => router.push(`/stop/${data.codigo}`)}
         style={styles.stopInfo}
       >
-        <Text style={styles.stopTitle}>Parada {data.nombre ?? 'unknown'}</Text>
+        <Text style={styles.stopTitle}>{data.nombre ?? 'unknown'}</Text>
         <Text style={styles.stopCode}>Codigo {data.codigo ?? 'unknown'}</Text>
       </Pressable>
       <Pressable
@@ -109,14 +110,15 @@ const BusLineDetails = () => {
 
   return (
     <View style={{ flex: 1, padding: 20, backgroundColor: '#EAEFEF' }}>
-        <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#25343F', textAlign: 'center'}}>Línea {id ?? 'unknown'}</Text>
-        <Text style={{ fontSize: 18, color: '#5A6B78', textAlign: 'center', marginBottom: 20 }}>Sentido actual: {direction === '11' ? 'Ida' : 'Vuelta'}</Text>
+        <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#25343F', textAlign: 'center', marginBottom: 8 }}>Línea {id ?? 'unknown'}</Text>
+        {/*<Text style={{ fontSize: 16, color: '#5A6B78', textAlign: 'center', marginBottom: 16 }}>Sentido actual: {direction === '11' ? 'Ida' : 'Vuelta'}</Text>*/}
         <Pressable onPress={() => {
             const newDirection = direction === '11' ? '12' : '11'
             setDirection(newDirection)
           }}>
-            <View style={{ backgroundColor: '#25343F', borderColor: '#BFC9D1', borderWidth: 1, borderRadius: 10, padding: 10, marginBottom: 20 }}>
+            <View style={{width: '100%', backgroundColor: '#25343F', borderColor: '#BFC9D1', borderWidth: 1, borderRadius: 10, padding: 8, marginBottom: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', alignSelf: 'center'}}>
                 <Text style={{ fontSize: 20, color: '#F5F7FA', maxWidth: '80%', alignSelf: 'center' }}>Cambiar sentido</Text>
+                <Image source={require('../../assets/images/switch.svg')} style={{ width: 24, height: 24}} />
             </View>
         </Pressable>
           <FlatList
@@ -144,7 +146,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     padding: 10,
-    marginBottom: 20,
+    marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
